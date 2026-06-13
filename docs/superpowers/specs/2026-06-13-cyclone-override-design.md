@@ -6,8 +6,8 @@ New feature: enter an extratropical cyclone's parameters and auto-generate every
 - **Central pressure** (mb) — primary intensity driver (`pressRank` 0–6).
 - **Core temperature** (°F) — snow favorability (`tempFactor` 1.0 cold → 0.15 warm).
 - **Size** — effective radius (mi); sets footprint radius (`PXMI ≈ 0.31 px/mi`).
-- **Core city** — searchable datalist of 250 US cities (name + lat/lon ported from snow-simulator `RAW_CITIES`, US-region entries only).
-- **Over ocean** toggle — nearest city + distance offshore; core nudged outward from US centroid by `distance·PXMI`.
+- **Core city** — searchable datalist of **325 CONUS cities** (name + lat/lon ported from snow-simulator `RAW_CITIES`; includes western cities the simulator left region-less, e.g. LA/Seattle/Phoenix, plus Lufkin TX & Rhinelander WI). AK/HI excluded (CONUS-only projection).
+- **Offset** toggle (ocean / another country) — nearest US city + **distance** + **8-point compass direction**; core placed by direction vector at `distance·PXMI`.
 
 ## Projection
 lat/lon → SVG `960×600` via linear fit to basemap state centroids:
@@ -16,6 +16,8 @@ lat/lon → SVG `960×600` via linear fit to basemap state centroids:
 ## Physics → product mapping
 - Per-hazard score = `(pressRank/6) · tempFactor` (blizzard wind less temp-sensitive).
 - score → probability via `pick()` into each hazard's scale; → CIG via `cigOf()`.
+- **Temperature falloff:** `tempFactor` grades 1.0 (≤10°F) → 0 (≥38°F); above freezing trends to rain. ≥38°F issues nothing; a warm-core note appears above freezing. Blizzard uses `tf^0.6` (robust in cold, zero in rain).
+- **Severity is temperature-aware:** Watch/Warning levels and MD watch-prob derive from the computed tier / max hazard score, not raw pressure — so a warm deep low does not issue a blizzard warning.
 - Extreme (snownado 80% + CIG4) only when pressure very low **and** core very cold.
 
 ## Generation
