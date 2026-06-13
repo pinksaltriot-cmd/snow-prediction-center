@@ -514,11 +514,49 @@ SPC.outlook = (function(){
     L.push('Forecaster: '+(S.meta.forecaster||'SPC'));
     return L.join('\n');
   }
+  // ----- Contour nesting QC (SPC convention: a higher prob must be enclosed by every lower one) -----
+  function pointInPoly(pt,poly){
+    let x=pt[0],y=pt[1],inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+      if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+  function polyInsideUnion(poly,others){ return poly.every(pt=>others.some(o=>pointInPoly(pt,o))); }
+  function nestingWarnings(){
+    const warns=new Set(); let total=0;
+    PANELS.forEach(([h,lbl])=>{
+      const byLevel={};
+      (S.areas[h]||[]).filter(a=>a.day==S.day).forEach(a=>{ const p=+String(a.level).slice(1); if(isNaN(p))return;
+        (byLevel[p]=byLevel[p]||[]).push(a.points); total++; });
+      const drawn=Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
+      if(!drawn.length) return;
+      const maxDrawn=drawn[drawn.length-1];
+      // every lower scale level must exist as a contour
+      T.HAZARDS[h].probs.filter(p=>p<maxDrawn).forEach(L=>{ if(!byLevel[L])
+        warns.add(lbl+': the '+L+'% contour is required around the higher areas but is missing.'); });
+      // each area must sit fully inside the next lower drawn level
+      drawn.forEach((X,i)=>{ if(i===0) return; const lower=drawn[i-1];
+        byLevel[X].forEach(poly=>{ if(!polyInsideUnion(poly,byLevel[lower]))
+          warns.add(lbl+': a '+X+'% area extends outside the '+lower+'% contour.'); });
+      });
+    });
+    return {warns:[...warns], total};
+  }
   function previewFn(el){
     const tierKey=suggestTier(), tier=T.tier(tierKey);
+    const nc=nestingWarnings();
+    let ncHtml='';
+    if(nc.total){
+      ncHtml = nc.warns.length
+        ? '<div style="margin:8px 0;padding:8px;border:1px solid #ffb020;border-radius:6px;background:rgba(255,176,32,.08);color:#ffd27a;font-size:12px"><strong>⚠ Nesting check ('+nc.warns.length+')</strong><ul style="margin:4px 0 0;padding-left:18px">'+nc.warns.map(w=>'<li>'+w+'</li>').join('')+'</ul></div>'
+        : '<div style="margin:8px 0;padding:6px 8px;border:1px solid #2ea66a;border-radius:6px;background:rgba(46,166,106,.08);color:#8fe3b5;font-size:12px">✓ Probability contours properly nested.</div>';
+    }
     el.innerHTML='<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">'+
         '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+tier.color+';border:1px solid #0a0a0a"></span>'+
         '<strong>Categorical:</strong> '+(S.day==='4-8'?'Probabilistic (Day 4-8)':tier.name+' Risk')+'</div>'+
+      ncHtml+
       '<div class="preview-text" id="olText"></div>'+
       '<div style="margin-top:8px"><button id="olPng">⬇ PNG</button> <button id="olCopy">⧉ Copy text</button></div>';
     el.querySelector('#olText').textContent=narrative();
