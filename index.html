@@ -1018,7 +1018,10 @@ SPC.tabs.show('outlook');
     const catLev=catRank>=7?'Extreme':catRank>=5?'High':catRank>=3?'Moderate':'Low';
     // MESOSCALE DISCUSSION
     const MD=D.md; MD.concerning=dom; MD.watchProb=Math.min(100,Math.round((catRank/8)*100));
-    MD.mesoGamma=(inp.size<=120 && catRank>=6); MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
+    // Meso-gamma MD for extreme circumstances: always at Extreme tier, plus compact High/Moderate
+    // cores or any violent (W4+) snownado threat — the pinpoint, short-fused scale.
+    MD.mesoGamma=(catRank>=8 || (catRank===7 && inp.size<=180) || (catRank===6 && inp.size<=120) || (R.snownado.cig>=3 && R.snownado.p>=45));
+    MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
     // WATCH
     const WA=D.watch; WA.type=(dom==='snownado'?'Snownado':'Blizzard');
     WA.level=(tr>=7?'PDS':tr>=5?'DS':'Normal'); WA.pds=(WA.level==='PDS');
