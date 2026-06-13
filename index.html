@@ -308,9 +308,24 @@ SPC.outlook = (function(){
     SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
   }
   function clearPanel(){ S.areas[areaKey()]=[]; if(S.panel!=='categorical') S.areas['cig_'+S.panel]=[]; }
-  // render() + preview() defined in Task 9/10.
-  let render=()=>{}, preview=()=>{};
+  // preview() defined in Task 10.
+  let preview=()=>{};
   function _wire(r,p){render=r;preview=p;}
+  function styleFor(level){
+    if(S.panel==='categorical'){ const t=T.tier(level); return {fill:t.color,opacity:t.hatch?0.9:0.55,stroke:'#0a0a0a',dash:t.hatch?'5 4':null}; }
+    if(level.startsWith('cig')){ const n=+level.slice(3); return {fill:T.CIG_SHADE[n],opacity:1,stroke:'#ffffff',strokeWidth:1.6,dash:'2 2'}; }
+    const p=+level.slice(1); return {fill:T.PROB_COLORS[p],opacity:0.5,stroke:'#0a0a0a'};
+  }
+  function render(){
+    const polys=[];
+    const baseKey = S.panel==='categorical'?'categorical':S.panel;
+    (S.areas[baseKey]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
+    if(S.panel!=='categorical'){
+      (S.areas['cig_'+S.panel]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
+    }
+    SPC.map.renderPolys(polys);
+    const pv=document.getElementById('previewBody'); if(pv) preview(pv);
+  }
   SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el)});
   return {tools,render:()=>render(),_wire,get curLevel(){return curLevel;}};
 })();
