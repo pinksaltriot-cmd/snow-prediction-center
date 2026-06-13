@@ -596,6 +596,36 @@ SPC.tabs.show('outlook');
   function _setPrev(p){prev=p;}
   SPC.tabs.register('reports',{tools,preview:(el)=>prev(el)});
   window.SPC._reports={ _setPrev, get R(){return R();}, get OL(){return OL;} };
+
+  function maxForecast(){
+    // Highest snownado prob + highest snownado CIG present on the active outlook day.
+    const day=OL.day;
+    const ps=(OL.areas.snownado||[]).filter(a=>a.day==day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
+    const cs=(OL.areas.cig_snownado||[]).filter(a=>a.day==day).map(a=>+a.level.slice(3)).filter(n=>!isNaN(n));
+    return {prob:ps.length?Math.max(...ps):0, cig:cs.length?Math.max(...cs):0};
+  }
+  function cigForW(wt){ const n=+wt.slice(1); // realized W -> implied CIG ceiling
+    if(n>=5)return 4; if(n>=4)return 3; if(n>=3)return 2; if(n>=2)return 1; return 0; }
+  function verdict(r,f){
+    const need=cigForW(r.w);
+    if(need>f.cig) return ['under-warned','#e23a3a'];
+    if(need===f.cig) return ['verified','#2ea66a'];
+    return ['over-warned','#ffd24d'];
+  }
+  function prev2(el){ el=el||document.getElementById('previewBody'); if(!el)return;
+    const f=maxForecast();
+    let html='<div style="margin-bottom:8px"><strong>Day '+OL.day+' snownado forecast ceiling:</strong> '+
+      (f.prob||'—')+'% / CIG'+(f.cig||'—')+'</div>';
+    if(!R().length){ html+='<p style="color:#8aa0bd">No reports to verify.</p>'; el.innerHTML=html; return; }
+    let worst='verified';
+    html+='<div class="preview-text">';
+    R().forEach(r=>{ const [v,c]=verdict(r,f);
+      if(v==='under-warned')worst='under-warned'; else if(v==='over-warned'&&worst==='verified')worst='over-warned';
+      html+='\n'+r.w+' '+r.city+' ('+r.note+') → predicted CIG'+(f.cig||0)+' → '+v.toUpperCase(); });
+    html+='\n\nNET RESULT: '+worst.toUpperCase()+'</div>';
+    el.innerHTML=html;
+  }
+  _setPrev(prev2);
 })();
 </script>
 </body>
