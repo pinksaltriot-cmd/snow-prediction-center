@@ -133,9 +133,9 @@ SPC.tax = (function(){
     {key:'EXTR', name:'Extreme',     color:'#1a1a1a', rank:6, hatch:true, gate:'≥80% CIG4 snownadoes'}
   ];
   const HAZARDS = {
-    snownado:    {name:'Snownadoes',   probs:[2,5,10,15,20,25,30,35,40,45,50,55,60,70,80], cigs:[1,2,3,4], color:'#e23a3a'},
-    blizzardWind:{name:'Blizzard Wind', probs:[5,10,15,20,30,40,45,50,60,70,75,80,90],     cigs:[1,2,3], color:'#3a7be2'},
-    snowSquall:  {name:'Snow Squalls', probs:[5,10,15,20,30,40,45,50,60],                  cigs:[1,2],   color:'#2ea66a'}
+    snownado:    {name:'Snownadoes',   probs:[2,5,10,15,30,45,60,80], cigs:[1,2,3,4], color:'#e23a3a'}, // 80% gates Extreme
+    blizzardWind:{name:'Blizzard Wind', probs:[5,15,30,45,60,75,90], cigs:[1,2,3], color:'#3a7be2'},
+    snowSquall:  {name:'Snow Squalls', probs:[5,15,30,45,60],       cigs:[1,2],   color:'#2ea66a'}
   };
   // Conditional Intensity Groups: shaded zones (NOT hatching). Distinct shade per level.
   const CIG = {
@@ -143,7 +143,7 @@ SPC.tax = (function(){
     blizzardWind:{1:'gusts ≥35 mph',2:'≥50 mph',3:'≥65 mph'},
     snowSquall:  {1:'≥2″/hr',2:'≥4″/hr, vis ≤¼ mi'}
   };
-  const PROB_COLORS = {2:'#80c080',5:'#7fc57f',10:'#a9d96b',15:'#ffe066',20:'#ffd24d',25:'#ffc04d',30:'#ffa366',35:'#fb9162',40:'#f07d63',45:'#e06666',50:'#e0628a',55:'#e87fbd',60:'#ee99ee',70:'#dd86f5',75:'#cf6fff',80:'#bb55ff',90:'#a83bff'};
+  const PROB_COLORS = {2:'#80c080',5:'#7fc57f',10:'#ffe066',15:'#ffd24d',30:'#ffa366',45:'#e06666',60:'#ee99ee',75:'#cf6fff',80:'#bb55ff',90:'#a83bff'};
   const CIG_SHADE = {1:'rgba(255,255,255,.10)',2:'rgba(255,255,255,.20)',3:'rgba(255,255,255,.32)',4:'rgba(255,255,255,.46)'};
   const WHITEOUT = [
     {t:'W0',lo:25,hi:40,  name:'Flurry Spinner', dmg:'Blowing-snow swirl; dusts cars; harmless'},
