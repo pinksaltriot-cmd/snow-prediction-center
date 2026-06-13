@@ -10,7 +10,7 @@ Eleven upgrades to the single-file app (`index.html`). Priority: **#8 (Outlook i
 
 ## 1. Outlook — draw the three risks; categorical as computed output (items 7, 8, 11)
 - The three hazards (Snownado, Blizzard Wind, Snow Squall) are **drawn like normal**: pick a probability or CIG level, draw a polygon, repeat at other levels to build nested contours (restored original workflow). Stored in `S.areas[h]` / `S.areas['cig_'+h]`.
-- **Categorical is never hand-drawn.** It is a **computed OUTPUT view** ("Categorical (output)" panel) that recolors each drawn risk area to its implied tier and renders it on the map. `suggestTier()` reads the highest drawn prob/CIG per hazard, keeping the Extreme gate (CIG4 snownado + ≥60% prob, never Day 3).
+- **Categorical is never hand-drawn.** It is a **computed OUTPUT view** ("Categorical (output)" panel) that recolors each drawn risk area to its implied tier and renders it on the map. `suggestTier()` reads the highest drawn prob/CIG per hazard, keeping the Extreme gate (CIG4 snownado + ≥80% prob, never Day 3).
 - Removing the drawable categorical panel eliminates the shared draw-state collision → **#8 lockup fixed** (each hazard exposes its own independent level buttons; entering snownado no longer blocks blizzard/squall).
 - Day 4–8 stays probability-only (Categorical output button hidden).
 
