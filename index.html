@@ -42,6 +42,10 @@
     <button data-tab="hwo">HWO / Hydro</button>
     <button data-tab="reports">Storm Reports</button>
   </nav>
+  <div style="display:flex;gap:6px">
+    <button id="btnSave">Save</button><button id="btnLoad">Load</button><button id="btnReset">Reset</button>
+    <input id="fileLoad" type="file" accept="application/json" style="display:none">
+  </div>
 </header>
 <div class="layout">
   <aside class="rail left" id="toolRail"><h2 class="sec">Tools</h2><div id="toolBody"></div></aside>
@@ -627,6 +631,15 @@ SPC.tabs.show('outlook');
   }
   _setPrev(prev2);
 })();
+</script>
+<script>
+// ===== SECTION I (cont.): SESSION SAVE / LOAD / RESET =====
+document.getElementById('btnSave').onclick=()=>{const b=new Blob([SPC.state.save()],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='snow-spc-session.json';a.click();};
+document.getElementById('btnLoad').onclick=()=>document.getElementById('fileLoad').click();
+document.getElementById('fileLoad').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{SPC.state.load(rd.result);SPC.tabs.show(SPC.tabs.current);};rd.readAsText(f);};
+document.getElementById('btnReset').onclick=()=>{if(confirm('Reset all products?'))SPC.state.reset();};
 </script>
 </body>
 </html>
