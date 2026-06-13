@@ -39,3 +39,9 @@ lat/lon → SVG `960×600` via linear fit to basemap state centroids:
 - Hazard peak prob/CIG are **derived from the categorical tier** (per-tier tables, dominant hazard full / others one notch down) so they never exceed it.
 - 32–60°F now steps down through tiers (e.g. 962 mb: 28°F Slight → 32°F Marginal → 40°F General → 46°F Lo-Sno → 58°F+ Zero) instead of sitting high.
 - Cyclone sets `outlook.catOverride`; the Outlook tab reflects it, and any manual draw/undo/clear in the Outlook clears the override and recomputes.
+
+
+## Level / meso-gamma / snowfall rebalance (update)
+- **Outlook levels raised:** snowScore now uses `min(1, rank/4.5)·tf` (stronger pressure response) and `scoreToRank` thresholds lowered (+ rank 8 at the top), so cold strong cyclones reach High/Extreme readily (e.g. 962 mb: 6°F Extreme, 14°F High). Warm/weak systems still step down low.
+- **Meso-gamma:** trigger is now `catRank >= 6` (Moderate+) with **no size limit** — lower threshold, still gated high by the temp+pressure-driven catRank.
+- **Expected snowfall is computed from individual hazard intensities, not the categorical:** synoptic base + snow-squall burst totals (by CIG) + snownado deposition that explodes with CIG (cig4 → 36–90″), while blizzard wind adds only ~2″ (drifting). So wind-only Marginal (~1–4″) barely beats General (~1–2″) and Extreme flies off the charts (45–114″+); a wind-only High still yields little snow.

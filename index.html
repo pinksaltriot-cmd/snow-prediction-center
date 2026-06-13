@@ -448,10 +448,18 @@ SPC.outlook = (function(){
   };
   function expectedSnow(tierKey){
     if(tierKey==='ZERO') return 'None';
-    const s=T.SNOWFALL[tierKey]; if(!s) return '';
-    const txt=s.lo+'–'+s.hi+'″'+(s.plus?'+':'');
-    const mods=(SNOW_MODS[tierKey]||[]).slice();
     const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
+    // Snowfall from INDIVIDUAL hazard intensities (not the categorical): blizzard wind barely
+    // adds (it redistributes), snow squalls add burst totals by rate, and snownado deposition
+    // explodes with CIG — so wind-only Marginal barely beats General while Extreme flies off the charts.
+    const maxP=Math.max(sn.p,bz.p,sq.p);
+    let lo=1, hi=2+maxP/100*2;                                  // synoptic base snow shield
+    if(sq.p){ const a=({1:[3,7],2:[8,18]})[sq.cig]||[1,3]; lo+=a[0]; hi+=a[1]; }
+    if(sn.p){ const a=({1:[2,6],2:[7,16],3:[16,36],4:[36,90]})[sn.cig]||[1,3]; lo+=a[0]; hi+=a[1]; }
+    if(bz.p){ hi+=2; }                                          // blizzard wind: drifting only
+    lo=Math.max(0,Math.round(lo)); hi=Math.round(hi);
+    const txt=lo+'–'+hi+'″'+(hi>=60?'+':'');
+    const mods=(SNOW_MODS[tierKey]||[]).slice();
     if(sq.p){ mods.push(sq.cig>=2?'localized squall burst rates ≥4″/hr with sudden whiteouts':'squall burst rates ≥2″/hr in narrow bands'); }
     if(bz.p){ mods.push(bz.cig>=3?'extreme blowing/drifting (≥65 mph) burying drifts far above storm-total amounts':bz.cig>=2?'significant blowing/drifting (≥50 mph) with deep drifts':'blowing and drifting snow reducing visibility'); }
     if(sn.cig>=4) mods.push('catastrophic localized scour and deposition near W5–W6 snownado tracks');
@@ -959,7 +967,7 @@ SPC.tabs.show('outlook');
   function pressRank(mb){ if(mb<960)return 6; if(mb<970)return 5; if(mb<980)return 4; if(mb<990)return 3; if(mb<1000)return 2; if(mb<1008)return 1; return 0; }
   function tempFactor(f){ if(f<=12)return 1; if(f<=18)return .88; if(f<=24)return .74; if(f<=28)return .60; if(f<=32)return .46; if(f<=36)return .34; if(f<=40)return .24; if(f<=46)return .15; if(f<=52)return .09; if(f<=60)return .05; return .02; }
   // snow-intensity score (0..1) -> categorical rank 0..7 (EXTR=8 handled separately)
-  function scoreToRank(s){ if(s>=0.82)return 7; if(s>=0.68)return 6; if(s>=0.54)return 5; if(s>=0.40)return 4; if(s>=0.27)return 3; if(s>=0.16)return 2; if(s>=0.07)return 1; return 0; }
+  function scoreToRank(s){ if(s>=0.95)return 8; if(s>=0.72)return 7; if(s>=0.58)return 6; if(s>=0.46)return 5; if(s>=0.34)return 4; if(s>=0.24)return 3; if(s>=0.15)return 2; if(s>=0.06)return 1; return 0; }
   const SN=[2,5,10,15,30,45,60,80], BZ=[5,15,30,45,60,75,90], SQ=[5,15,30,45,60];
   function pick(scale,score){ if(score<=.05)return 0; return scale[Math.min(scale.length-1,Math.round(score*(scale.length-1)))]; }
   function cigOf(maxc,score){ if(score<=.1)return 0; return Math.min(maxc,Math.max(1,Math.round(score*maxc))); }
@@ -996,7 +1004,7 @@ SPC.tabs.show('outlook');
     const sizePx=Math.max(24,(inp.noEdge?400:inp.size)*PXMI);
     const pressStr=inp.noLow?'no closed low':(inp.mb+' mb'), sizeStr=inp.noEdge?'no determined edge':(inp.size+' mi');
     // Categorical from a snow-intensity score (precise, gradual temperature control)
-    const snowScore=(rank/6)*tf;
+    const snowScore=Math.min(1,rank/4.5)*tf;
     let catRank=scoreToRank(snowScore);
     if(!inp.noLow && inp.mb<960 && inp.tempF<=12) catRank=8; // very cold bomb -> Extreme
     const catKey=T.TIERS[catRank].key, tier=T.tier(catKey), tr=catRank;
@@ -1020,7 +1028,7 @@ SPC.tabs.show('outlook');
     const MD=D.md; MD.concerning=dom; MD.watchProb=Math.min(100,Math.round((catRank/8)*100));
     // Meso-gamma MD for extreme circumstances: always at Extreme tier, plus compact High/Moderate
     // cores or any violent (W4+) snownado threat — the pinpoint, short-fused scale.
-    MD.mesoGamma=(catRank>=8 || (catRank===7 && inp.size<=180) || (catRank===6 && inp.size<=120) || (R.snownado.cig>=3 && R.snownado.p>=45));
+    MD.mesoGamma=(catRank>=6); // extreme circumstances: intense + cold; no size limit
     MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
     // WATCH
     const WA=D.watch; WA.type=(dom==='snownado'?'Snownado':'Blizzard');
