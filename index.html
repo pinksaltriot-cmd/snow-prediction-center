@@ -264,5 +264,57 @@ SPC.tabs = (function(){
 });
 SPC.tabs.show('outlook');
 </script>
+<script>
+// ===== SECTION D: OUTLOOK =====
+SPC.outlook = (function(){
+  const T=SPC.tax, S=SPC.state.doc.outlook;
+  const PANELS=[['categorical','Categorical'],['snownado','Snownado'],['blizzardWind','Blizzard Wind'],['snowSquall','Snow Squall']];
+  function levelOptions(){
+    if(S.panel==='categorical') return T.TIERS.map(t=>({v:t.key,label:t.name,color:t.color}));
+    const hz=T.HAZARDS[S.panel];
+    const probs=hz.probs.map(p=>({v:'p'+p,label:p+'%',color:T.PROB_COLORS[p]}));
+    const cigs=hz.cigs.map(c=>({v:'cig'+c,label:'CIG'+c,color:'#ffffff'}));
+    return probs.concat(cigs);
+  }
+  let curLevel=null;
+  function tools(el){
+    el.innerHTML='<h2 class="sec">Day</h2><div id="olDays"></div>'+
+      '<h2 class="sec">Panel</h2><div id="olPanels"></div>'+
+      '<h2 class="sec">Level</h2><div id="olLevels"></div>'+
+      '<h2 class="sec">Actions</h2>'+
+      '<button id="olDraw">✏️ Draw area</button> <button id="olUndo">Undo last</button> '+
+      '<button id="olClear">Clear panel</button>';
+    const days=el.querySelector('#olDays');
+    [1,2,3,'4-8'].forEach(d=>{const b=document.createElement('button');b.textContent='Day '+d;
+      b.className=S.day==d?'active':''; b.onclick=()=>{S.day=d;S.panel='categorical';tools(el);render();};days.appendChild(b);});
+    const panels=el.querySelector('#olPanels');
+    PANELS.forEach(([k,lbl])=>{ if(S.day==='4-8'&&k==='categorical')return; // 4-8 is prob-only
+      const b=document.createElement('button');b.textContent=lbl;b.className=S.panel===k?'active':'';
+      b.onclick=()=>{S.panel=k;curLevel=null;tools(el);render();};panels.appendChild(b);});
+    const lv=el.querySelector('#olLevels');
+    levelOptions().forEach(o=>{const b=document.createElement('button');b.textContent=o.label;
+      b.style.borderLeft='6px solid '+o.color; b.className=curLevel===o.v?'active':'';
+      if(o.v==='EXTR'&&S.day===3){b.disabled=true;b.title='Day 3 cannot issue Extreme';}
+      b.onclick=()=>{curLevel=o.v;tools(el);};lv.appendChild(b);});
+    el.querySelector('#olDraw').onclick=()=>startDraw();
+    el.querySelector('#olUndo').onclick=()=>{const a=areaList();a.pop();render();};
+    el.querySelector('#olClear').onclick=()=>{clearPanel();render();};
+  }
+  function areaKey(){ return S.panel==='categorical'?'categorical':
+    (curLevel&&curLevel.startsWith('cig')?'cig_'+S.panel:S.panel); }
+  function areaList(){ return S.areas[areaKey()]; }
+  function startDraw(){
+    if(!curLevel){alert('Pick a level first');return;}
+    SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
+  }
+  function clearPanel(){ S.areas[areaKey()]=[]; if(S.panel!=='categorical') S.areas['cig_'+S.panel]=[]; }
+  // render() + preview() defined in Task 9/10.
+  let render=()=>{}, preview=()=>{};
+  function _wire(r,p){render=r;preview=p;}
+  SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el)});
+  return {tools,render:()=>render(),_wire,get curLevel(){return curLevel;}};
+})();
+SPC.tabs.show('outlook');
+</script>
 </body>
 </html>
