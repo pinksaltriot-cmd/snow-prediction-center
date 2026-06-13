@@ -449,15 +449,17 @@ SPC.outlook = (function(){
   function expectedSnow(tierKey){
     if(tierKey==='ZERO') return 'None';
     const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
-    // Snowfall = EVERY hazard's individual intensity (CIG) scaled by its probability. Snownado
-    // deposition explodes with CIG, squalls add burst totals by rate, and high-end blizzard wind
-    // is a major contributor (≥65 mph CIG3 is a big deal) — only a low-end Marginal wind nudges General.
+    // Snowfall = EVERY hazard's individual intensity (CIG) scaled by probability, then a
+    // multi-hazard synergy multiplier so overlapping hazards COMPOUND — an all-maxed event
+    // flies by far the highest. Squalls and snownadoes are heavy hitters; high-end wind too.
     const maxP=Math.max(sn.p,bz.p,sq.p);
-    let lo=1, hi=2+maxP/100*2;                                  // synoptic base snow shield
+    let lo=1, hi=2+maxP/100*3;                                  // synoptic base snow shield
     function addHaz(p,cig,table,dflt){ if(!p)return; const a=table[cig]||dflt; const f=0.6+0.4*p/100; lo+=a[0]*f; hi+=a[1]*f; }
-    addHaz(sq.p,sq.cig,{1:[3,7],2:[8,18]},[1,3]);              // snow squalls (rate)
-    addHaz(sn.p,sn.cig,{1:[2,6],2:[7,16],3:[16,36],4:[36,90]},[1,3]); // snownado deposition
-    addHaz(bz.p,bz.cig,{1:[1,3],2:[6,15],3:[16,38]},[0,2]);    // blizzard wind (heavy snow + drifting)
+    addHaz(sq.p,sq.cig,{1:[6,14],2:[16,38]},[1,3]);            // snow squalls (heavy burst rates)
+    addHaz(sn.p,sn.cig,{1:[3,9],2:[12,28],3:[30,68],4:[75,190]},[1,3]); // snownado deposition (explosive)
+    addHaz(bz.p,bz.cig,{1:[1,4],2:[8,20],3:[22,52]},[0,2]);    // blizzard wind (heavy snow + drifting)
+    const active=[sn,bz,sq].filter(x=>x.p>0); const sumCig=active.reduce((a,x)=>a+(x.cig||0),0);
+    if(active.length>=2){ const m=1+0.09*(active.length-1)+0.045*sumCig; lo*=m; hi*=m; } // synergy
     lo=Math.max(0,Math.round(lo)); hi=Math.round(hi);
     const txt=lo+'–'+hi+'″'+(hi>=60?'+':'');
     const mods=(SNOW_MODS[tierKey]||[]).slice();
