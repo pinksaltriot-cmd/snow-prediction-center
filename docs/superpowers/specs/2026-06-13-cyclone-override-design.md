@@ -31,3 +31,11 @@ lat/lon → SVG `960×600` via linear fit to basemap state centroids:
 ## Notes
 - Inputs are module-local (transient); generated products live in `D.*` and persist through save/load.
 - Placements are approximate (linear projection + circular footprint) — an auto-draft to refine.
+
+
+## Tier ladder + score-driven categorical (update)
+- Tiers extended below General: **ZERO · LO-SNO · General Snow · Marginal · Slight · Enhanced · Moderate · High · Extreme** (ranks 0–8); all rank-dependent code (probToRank, spotter map, severity, day-3 cap, preparedness) shifted accordingly.
+- Cyclone categorical is now driven by a **snow-intensity score** `snowScore=(rank/6)·tempFactor` → `scoreToRank` (0–8), giving precise, gradual temperature control; very cold bomb (<960 mb, ≤12°F) → Extreme.
+- Hazard peak prob/CIG are **derived from the categorical tier** (per-tier tables, dominant hazard full / others one notch down) so they never exceed it.
+- 32–60°F now steps down through tiers (e.g. 962 mb: 28°F Slight → 32°F Marginal → 40°F General → 46°F Lo-Sno → 58°F+ Zero) instead of sitting high.
+- Cyclone sets `outlook.catOverride`; the Outlook tab reflects it, and any manual draw/undo/clear in the Outlook clears the override and recomputes.

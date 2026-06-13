@@ -125,13 +125,15 @@
 // ===== SECTION A: TAXONOMY =====
 SPC.tax = (function(){
   const TIERS = [
-    {key:'SNOW', name:'General Snow', color:'#c1e9c1', rank:0},
-    {key:'MRGL', name:'Marginal',    color:'#66a366', rank:1},
-    {key:'SLGT', name:'Slight',      color:'#ffe066', rank:2},
-    {key:'ENH',  name:'Enhanced',    color:'#ffa366', rank:3},
-    {key:'MDT',  name:'Moderate',    color:'#e06666', rank:4},
-    {key:'HIGH', name:'High',        color:'#ee99ee', rank:5},
-    {key:'EXTR', name:'Extreme',     color:'#1a1a1a', rank:6, hatch:true, gate:'≥80% CIG4 snownadoes'}
+    {key:'ZERO', name:'Zero',        color:'#dfe6ee', rank:0},
+    {key:'LOSNO',name:'Lo-Sno',      color:'#bfe3cf', rank:1},
+    {key:'SNOW', name:'General Snow', color:'#c1e9c1', rank:2},
+    {key:'MRGL', name:'Marginal',    color:'#66a366', rank:3},
+    {key:'SLGT', name:'Slight',      color:'#ffe066', rank:4},
+    {key:'ENH',  name:'Enhanced',    color:'#ffa366', rank:5},
+    {key:'MDT',  name:'Moderate',    color:'#e06666', rank:6},
+    {key:'HIGH', name:'High',        color:'#ee99ee', rank:7},
+    {key:'EXTR', name:'Extreme',     color:'#1a1a1a', rank:8, hatch:true, gate:'≥80% CIG4 snownadoes'}
   ];
   const HAZARDS = {
     snownado:    {name:'Snownadoes',   probs:[2,5,10,15,30,45,60,80], cigs:[1,2,3,4], color:'#e23a3a'}, // 80% gates Extreme
@@ -158,6 +160,7 @@ SPC.tax = (function(){
   const NOTABILITY = ['Notable','Super-Notable','Super-Hyper-Notable'];
   // Expected storm-total snowfall by categorical tier (item 1, computed from risk).
   const SNOWFALL = {
+    ZERO:{lo:0,hi:0},   LOSNO:{lo:0,hi:1},
     SNOW:{lo:1,hi:3},   MRGL:{lo:2,hi:5},   SLGT:{lo:4,hi:8},   ENH:{lo:6,hi:12},
     MDT:{lo:10,hi:18},  HIGH:{lo:15,hi:30}, EXTR:{lo:24,hi:36,plus:true}
   };
@@ -251,7 +254,7 @@ SPC.map = (function(){
 SPC.state = (function(){
   // Central document. Each product family keeps its own areas + meta.
   const doc = {
-    outlook:{ day:1, panel:'snownado',
+    outlook:{ day:1, panel:'snownado', catOverride:null,
       areas:{ categorical:[], snownado:[], blizzardWind:[], snowSquall:[],
               cig_snownado:[], cig_blizzardWind:[], cig_snowSquall:[] },
       meta:{ forecaster:'', issued:'' } },
@@ -372,7 +375,7 @@ SPC.outlook = (function(){
       ? 'Switch to a hazard panel to draw. The categorical envelope updates here as an output.'
       : 'Pick a probability or CIG level, then Draw. Repeat at other levels to build nested contours.';
     el.querySelector('#olDraw').onclick=()=>startDraw();
-    el.querySelector('#olUndo').onclick=()=>{const a=areaList();if(a)a.pop();render();};
+    el.querySelector('#olUndo').onclick=()=>{S.catOverride=null;const a=areaList();if(a)a.pop();render();};
     el.querySelector('#olClear').onclick=()=>{clearPanel();render();};
   }
   function areaKey(){ return (curLevel&&String(curLevel).startsWith('cig'))?'cig_'+S.panel:S.panel; }
@@ -380,9 +383,9 @@ SPC.outlook = (function(){
   function startDraw(){
     if(S.panel==='categorical'){alert('Categorical is a computed output. Draw the three hazard risks instead.');return;}
     if(!curLevel){alert('Pick a level first');return;}
-    SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
+    SPC.map.start(null,(pts)=>{ S.catOverride=null; areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
   }
-  function clearPanel(){ if(S.panel==='categorical')return; S.areas[S.panel]=[]; S.areas['cig_'+S.panel]=[]; }
+  function clearPanel(){ S.catOverride=null; if(S.panel==='categorical')return; S.areas[S.panel]=[]; S.areas['cig_'+S.panel]=[]; }
   let preview=()=>{};
   function _wire(r,p){render=r;preview=p;}
   function styleFor(level){
@@ -391,8 +394,8 @@ SPC.outlook = (function(){
   }
   // Map a hazard's peak probability to a categorical tier rank.
   function probToRank(panel,maxP){
-    if(panel==='snownado'){ if(maxP>=30)return 5; if(maxP>=15)return 4; if(maxP>=10)return 3; if(maxP>=5)return 2; if(maxP>=2)return 1; return 0; }
-    if(maxP>=60)return 5; if(maxP>=45)return 4; if(maxP>=30)return 3; if(maxP>=15)return 2; if(maxP>=5)return 1; return 0;
+    if(panel==='snownado'){ if(maxP>=30)return 7; if(maxP>=15)return 6; if(maxP>=10)return 5; if(maxP>=5)return 4; if(maxP>=2)return 3; return 0; }
+    if(maxP>=60)return 7; if(maxP>=45)return 6; if(maxP>=30)return 5; if(maxP>=15)return 4; if(maxP>=5)return 3; return 0;
   }
   function extremeGate(){ const r=riskFor('snownado'); return r.cig>=4 && r.p>=80 && S.day!=='4-8' && S.day!==3; }
   // Build the categorical OUTPUT polygons: each drawn risk area, recolored to its implied tier (item 7).
@@ -420,18 +423,21 @@ SPC.outlook = (function(){
   }
   // Categorical tier computed from the drawn hazard risks (item 7).
   function suggestTier(){
+    if(S.catOverride) return S.catOverride; // set by Cyclone Override; cleared on manual edit
     let rank=0;
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
       const p=riskFor(h).p; if(p) rank=Math.max(rank,probToRank(h,p));
     });
     if(extremeGate()) return 'EXTR';
-    if(S.day===3 && rank>=6) rank=5; // Day 3 cannot reach Extreme
+    if(S.day===3 && rank>7) rank=7; // Day 3 cannot reach Extreme
     return T.TIERS[rank].key;
   }
   // ----- Expanded outputs (items 1, 9, 11) -----
   const W={1:'W2',2:'W2',3:'W4',4:'W6'};
   // Base snowfall texture modifiers per categorical tier — every category contributes several (item 1).
   const SNOW_MODS={
+    ZERO:['no accumulation expected'],
+    LOSNO:['a trace to an inch','mostly on grassy and elevated surfaces','no meaningful travel impact'],
     SNOW:['light accumulations confined to grassy and elevated surfaces','little to no travel impact','snow-to-liquid ratios near 10:1'],
     MRGL:['a few slick spots possible on untreated surfaces','locally higher amounts under any persistent banding','ratios around 12:1','brief visibility reductions'],
     SLGT:['plowable snow likely areawide','banded maxima can run ~50% above the headline range','fluffier 12–15:1 ratios','periods of reduced visibility','minor drifting in open areas'],
@@ -441,6 +447,7 @@ SPC.outlook = (function(){
     EXTR:['historic, paralyzing storm-total snowfall','violent rates exceeding 3–4″/hr','snow-only extreme depths with multi-foot accumulations','continuous whiteout conditions','prolonged multi-day duration','severe structural snow-loading concerns','complete shutdown of travel and infrastructure']
   };
   function expectedSnow(tierKey){
+    if(tierKey==='ZERO') return 'None';
     const s=T.SNOWFALL[tierKey]; if(!s) return '';
     const txt=s.lo+'–'+s.hi+'″'+(s.plus?'+':'');
     const mods=(SNOW_MODS[tierKey]||[]).slice();
@@ -475,13 +482,15 @@ SPC.outlook = (function(){
   }
   function preparedness(tierKey){
     const r=T.tier(tierKey).rank;
-    if(r>=6) return 'Life-threatening, potentially historic event. Complete preparations now; do not travel. Heed all warnings and evacuation guidance.';
-    if(r>=5) return 'Dangerous, high-impact event likely. Finish preparations early and avoid all non-essential travel.';
-    if(r>=4) return 'Significant impacts expected over a broad area. Prepare for hazardous travel and possible power loss.';
-    if(r>=3) return 'Enhanced impacts possible. Stay weather-aware and be ready to alter travel plans.';
-    if(r>=2) return 'Localized impacts possible. Monitor later statements for changes.';
-    if(r>=1) return 'Marginal threat. Conditions warrant routine monitoring.';
-    return 'No significant convective-snow impacts anticipated.';
+    if(r>=8) return 'Life-threatening, potentially historic event. Complete preparations now; do not travel. Heed all warnings and evacuation guidance.';
+    if(r>=7) return 'Dangerous, high-impact event likely. Finish preparations early and avoid all non-essential travel.';
+    if(r>=6) return 'Significant impacts expected over a broad area. Prepare for hazardous travel and possible power loss.';
+    if(r>=5) return 'Enhanced impacts possible. Stay weather-aware and be ready to alter travel plans.';
+    if(r>=4) return 'Localized impacts possible. Monitor later statements for changes.';
+    if(r>=3) return 'Marginal threat. Conditions warrant routine monitoring.';
+    if(r>=2) return 'General light snow possible. Minor slick spots; no major impacts expected.';
+    if(r>=1) return 'Low, spotty snow. Little to no impact anticipated.';
+    return 'No snow threat anticipated.';
   }
   function narrative(){
     const tierKey=suggestTier(), tier=T.tier(tierKey);
@@ -813,7 +822,7 @@ SPC.tabs.show('outlook');
     {label:'5 — Emergency · Continuous Reporting', stmt:'EMERGENCY spotter activation. Continuous, real-time reporting is requested for all life-threatening conditions. Spotters should prioritize personal safety above reporting at all times.'}
   ];
   function suggestSpot(){
-    try{ const r=SPC.tax.tier(SPC.outlook.suggestTier()).rank; return [0,1,2,3,4,4,5][r]||0; }catch(e){ return 0; }
+    try{ const r=SPC.tax.tier(SPC.outlook.suggestTier()).rank; return [0,0,1,1,2,3,4,4,5][r]||0; }catch(e){ return 0; }
   }
   function curSpot(){ if(typeof H.spotterLevel==='number') return H.spotterLevel; return H.spotter?2:0; }
   function tools(el){
@@ -948,7 +957,9 @@ SPC.tabs.show('outlook');
 
   // ---- physics ----
   function pressRank(mb){ if(mb<960)return 6; if(mb<970)return 5; if(mb<980)return 4; if(mb<990)return 3; if(mb<1000)return 2; if(mb<1008)return 1; return 0; }
-  function tempFactor(f){ if(f<=10)return 1; if(f<=20)return .9; if(f<=26)return .78; if(f<=32)return .6; if(f<=40)return .45; if(f<=50)return .32; if(f<=60)return .18; return .08; }
+  function tempFactor(f){ if(f<=12)return 1; if(f<=18)return .88; if(f<=24)return .74; if(f<=28)return .60; if(f<=32)return .46; if(f<=36)return .34; if(f<=40)return .24; if(f<=46)return .15; if(f<=52)return .09; if(f<=60)return .05; return .02; }
+  // snow-intensity score (0..1) -> categorical rank 0..7 (EXTR=8 handled separately)
+  function scoreToRank(s){ if(s>=0.82)return 7; if(s>=0.68)return 6; if(s>=0.54)return 5; if(s>=0.40)return 4; if(s>=0.27)return 3; if(s>=0.16)return 2; if(s>=0.07)return 1; return 0; }
   const SN=[2,5,10,15,30,45,60,80], BZ=[5,15,30,45,60,75,90], SQ=[5,15,30,45,60];
   function pick(scale,score){ if(score<=.05)return 0; return scale[Math.min(scale.length-1,Math.round(score*(scale.length-1)))]; }
   function cigOf(maxc,score){ if(score<=.1)return 0; return Math.min(maxc,Math.max(1,Math.round(score*maxc))); }
@@ -981,34 +992,46 @@ SPC.tabs.show('outlook');
     if(inp.overOcean&&inp.oceanDist>0){ const v=DIRV[inp.dir]||[0,0]; cx+=v[0]*inp.oceanDist*PXMI; cy+=v[1]*inp.oceanDist*PXMI; }
     const loc=(inp.overOcean&&inp.oceanDist>0)?('~'+inp.oceanDist+' mi '+inp.dir+' of '+city.name):('over '+city.name);
     const rank=inp.noLow?1:pressRank(inp.mb);
-    const R=risks(rank,inp.tempF), sizePx=Math.max(24,(inp.noEdge?400:inp.size)*PXMI);
+    const tf=tempFactor(inp.tempF);
+    const sizePx=Math.max(24,(inp.noEdge?400:inp.size)*PXMI);
     const pressStr=inp.noLow?'no closed low':(inp.mb+' mb'), sizeStr=inp.noEdge?'no determined edge':(inp.size+' mi');
-    // OUTLOOK: nested contours per hazard
-    const OL=D.outlook; OL.day=1; OL.panel='categorical';
+    // Categorical from a snow-intensity score (precise, gradual temperature control)
+    const snowScore=(rank/6)*tf;
+    let catRank=scoreToRank(snowScore);
+    if(!inp.noLow && inp.mb<960 && inp.tempF<=12) catRank=8; // very cold bomb -> Extreme
+    const catKey=T.TIERS[catRank].key, tier=T.tier(catKey), tr=catRank;
+    // dominant hazard by environment (cold favors snownadoes; wind always a player)
+    const dom=[['snownado',tf],['blizzardWind',0.6+0.4*tf],['snowSquall',0.35+0.5*tf]].sort((a,b)=>b[1]-a[1])[0][0];
+    // hazard peak prob / CIG derived from the categorical tier (never exceeds it)
+    const HP={snownado:[0,0,0,2,5,10,15,30,80],blizzardWind:[0,0,0,5,15,30,45,75,90],snowSquall:[0,0,0,5,15,30,45,60,60]};
+    const HC={snownado:[0,0,0,1,1,2,2,3,4],blizzardWind:[0,0,0,1,1,2,2,3,3],snowSquall:[0,0,0,0,1,1,2,2,2]};
+    function hz(h){ const cr=(h===dom)?catRank:Math.max(0,catRank-1); return {p:HP[h][cr],cig:HC[h][cr],score:cr/8}; }
+    const R={snownado:hz('snownado'),blizzardWind:hz('blizzardWind'),snowSquall:hz('snowSquall')};
+    // OUTLOOK: nested contours per hazard + categorical override so the Outlook tab matches
+    const OL=D.outlook; OL.day=1; OL.panel='categorical'; OL.catOverride=catKey;
     const SCALES={snownado:SN,blizzardWind:BZ,snowSquall:SQ};
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{ OL.areas[h]=[]; OL.areas['cig_'+h]=[];
       const peak=R[h].p; if(!peak)return; const scale=SCALES[h].filter(v=>v<=peak), m=scale.length;
       scale.forEach((v,i)=>{ const rad=sizePx*(1-0.7*(i/Math.max(1,m-1))); OL.areas[h].push({points:circle(cx,cy,rad),level:'p'+v,day:1}); });
       const pc=R[h].cig; for(let c=1;c<=pc;c++){ const rad=sizePx*0.5*(1-0.55*((c-1)/Math.max(1,pc-1))); OL.areas['cig_'+h].push({points:circle(cx,cy,rad),level:'cig'+c,day:1}); }
     });
-    const dom=dominant(R), tierKey=SPC.outlook.suggestTier(), tier=T.tier(tierKey);
-    const tr=tier.rank, maxScore=Math.max(R.snownado.score,R.blizzardWind.score,R.snowSquall.score);
+    const catLev=catRank>=7?'Extreme':catRank>=5?'High':catRank>=3?'Moderate':'Low';
     // MESOSCALE DISCUSSION
-    const MD=D.md; MD.concerning=dom; MD.watchProb=Math.min(100,Math.round(maxScore*100));
-    MD.mesoGamma=(inp.size<=120 && rank>=4); MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
+    const MD=D.md; MD.concerning=dom; MD.watchProb=Math.min(100,Math.round((catRank/8)*100));
+    MD.mesoGamma=(inp.size<=120 && catRank>=6); MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
     // WATCH
     const WA=D.watch; WA.type=(dom==='snownado'?'Snownado':'Blizzard');
-    WA.level=(tr>=5?'PDS':tr>=3?'DS':'Normal'); WA.pds=(WA.level==='PDS');
+    WA.level=(tr>=7?'PDS':tr>=5?'DS':'Normal'); WA.pds=(WA.level==='PDS');
     WA.areas=[{points:circle(cx,cy,sizePx*0.8)}]; WA.number=WA.number||1;
-    WA.probTable={snownado:lev(R.snownado.score),w2:lev(R.snownado.cig/4),wind60:lev(R.blizzardWind.score),squall4:lev(R.snowSquall.score)};
+    WA.probTable={snownado:catLev,w2:catLev,wind60:catLev,squall4:catLev};
     // WARNING
     const WG=D.warning; WG.type=(dom==='snownado'?'Snownado':dom==='snowSquall'?'Snow Squall':'Blizzard');
     const canEmg=(WG.type==='Blizzard'||WG.type==='Snownado');
-    WG.level=(tr>=6&&canEmg?'Emergency':tr>=5?'PDS':tr>=3?'DS':'Normal'); WG.emergency=(WG.level==='Emergency');
+    WG.level=(tr>=8&&canEmg?'Emergency':tr>=7?'PDS':tr>=5?'DS':'Normal'); WG.emergency=(WG.level==='Emergency');
     WG.areas=[{points:circle(cx,cy,sizePx*0.45)}]; WG.wfo=city.name;
     // HWO spotter
-    const H=D.hwo; H.spotterLevel=[0,1,2,3,4,4,5][tr]||0; H.spotter=(H.spotterLevel>=2);
-    H.days[0]='Extratropical cyclone ('+pressStr+', core '+inp.tempF+'F) '+loc+' producing '+tier.name.toLowerCase()+'-risk convective snow.';
+    const H=D.hwo; H.spotterLevel=[0,0,1,1,2,3,4,4,5][tr]||0; H.spotter=(H.spotterLevel>=2);
+    H.days[0]=catRank===0?('Weak/warm system '+loc+' \u2014 no significant snow expected.'):('Extratropical cyclone ('+pressStr+', core '+inp.tempF+'F) '+loc+' producing '+tier.name+'-tier snow.');
     const coreLL={lat:(cy-1176.93)/-23.1797,lon:(cx-2050.93)/15.8463};
     const footR=inp.noEdge?400:inp.size;
     const inFoot=CITIES.filter(c=>haversine(coreLL,c)<=footR).map(c=>c.name);
