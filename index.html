@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snow Prediction Center</title>
+<style>
+  :root{--bg:#0b1220;--panel:#121c2e;--ink:#e7eef7;--muted:#8aa0bd;--line:#22324b;--accent:#7dd3fc;}
+  *{box-sizing:border-box;}
+  body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);}
+  header.appbar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:#0a1424;border-bottom:1px solid var(--line);}
+  header.appbar h1{font-size:16px;margin:0;letter-spacing:.5px;}
+  nav.tabs{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;}
+  nav.tabs button{background:transparent;color:var(--muted);border:1px solid transparent;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;}
+  nav.tabs button.active{background:var(--panel);color:var(--ink);border-color:var(--line);}
+  .layout{display:grid;grid-template-columns:260px 1fr 360px;height:calc(100vh - 49px);}
+  .rail{background:var(--panel);overflow:auto;padding:12px;}
+  .rail.left{border-right:1px solid var(--line);}
+  .rail.right{border-left:1px solid var(--line);}
+  .map-wrap{display:flex;align-items:center;justify-content:center;background:#0e1830;overflow:hidden;}
+  #map{width:100%;height:100%;max-height:100%;}
+  h2.sec{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 8px;}
+  .preview-text{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#0a1424;border:1px solid var(--line);border-radius:6px;padding:10px;color:#cfe2f7;}
+  button{background:#1b2c49;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:12px;margin:2px 0;}
+  button:hover{background:#22375c;}
+  button.active{background:var(--accent);color:#06131f;border-color:var(--accent);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  input,select,textarea{background:#0a1424;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:13px;margin:2px 0;}
+  label{font-size:12px;color:var(--muted);display:block;margin-top:6px;}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>❄ Snow Prediction Center</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="outlook" class="active">Outlook</button>
+    <button data-tab="md">Mesoscale Discussion</button>
+    <button data-tab="watch">Watch</button>
+    <button data-tab="warning">Warning</button>
+    <button data-tab="hwo">HWO / Hydro</button>
+    <button data-tab="reports">Storm Reports</button>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="rail left" id="toolRail"><h2 class="sec">Tools</h2><div id="toolBody"></div></aside>
+  <main class="map-wrap"><svg id="map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet"></svg></main>
+  <aside class="rail right" id="previewRail"><h2 class="sec">Product Preview</h2><div id="previewBody"><div class="preview-text" id="previewText">No product yet.</div></div></aside>
+</div>
+<script>window.SPC = {};</script>
+</body>
+</html>
