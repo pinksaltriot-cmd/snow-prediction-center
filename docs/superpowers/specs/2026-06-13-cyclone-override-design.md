@@ -3,9 +3,9 @@
 New feature: enter an extratropical cyclone's parameters and auto-generate every SPC product.
 
 ## Inputs (new "🌀 Cyclone Override" tab)
-- **Central pressure** (mb) — primary intensity driver (`pressRank` 0–6).
-- **Core temperature** (°F) — snow favorability (`tempFactor` 1.0 cold → 0.15 warm).
-- **Size** — effective radius (mi); sets footprint radius (`PXMI ≈ 0.31 px/mi`).
+- **Central pressure** (mb) — primary intensity driver (`pressRank` 0–6). **No closed low** checkbox = open wave (rank 1, marginal).
+- **Core temperature** (°F) — snow favorability (`tempFactor` 1.0 ≤10°F → 0.08 floor); products persist (reduced) through 32–60°F, never absolute zero.
+- **Size** — effective radius (mi); sets footprint radius (`PXMI ≈ 0.31 px/mi`). **No determined edge** checkbox = diffuse system (~400 mi default).
 - **Core city** — searchable datalist of **325 CONUS cities** (name + lat/lon ported from snow-simulator `RAW_CITIES`; includes western cities the simulator left region-less, e.g. LA/Seattle/Phoenix, plus Lufkin TX & Rhinelander WI). AK/HI excluded (CONUS-only projection).
 - **Offset** toggle (ocean / another country) — nearest US city + **distance** + **8-point compass direction**; core placed by direction vector at `distance·PXMI`.
 
@@ -16,7 +16,7 @@ lat/lon → SVG `960×600` via linear fit to basemap state centroids:
 ## Physics → product mapping
 - Per-hazard score = `(pressRank/6) · tempFactor` (blizzard wind less temp-sensitive).
 - score → probability via `pick()` into each hazard's scale; → CIG via `cigOf()`.
-- **Temperature falloff:** `tempFactor` grades 1.0 (≤10°F) → 0 (≥38°F); above freezing trends to rain. ≥38°F issues nothing; a warm-core note appears above freezing. Blizzard uses `tf^0.6` (robust in cold, zero in rain).
+- **Temperature falloff:** `tempFactor` 1.0 (≤10°F) → 0.6 (≤32) → 0.45 (≤40) → 0.32 (≤50) → 0.18 (≤60) → 0.08 floor. 32–50°F keeps solid coverage, 50–60°F much less, never absolute zero. Warm-core note above 32°F. Blizzard uses `tf^0.6`.
 - **Severity is temperature-aware:** Watch/Warning levels and MD watch-prob derive from the computed tier / max hazard score, not raw pressure — so a warm deep low does not issue a blizzard warning.
 - Extreme (snownado 80% + CIG4) only when pressure very low **and** core very cold.
 

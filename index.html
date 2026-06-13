@@ -948,12 +948,12 @@ SPC.tabs.show('outlook');
 
   // ---- physics ----
   function pressRank(mb){ if(mb<960)return 6; if(mb<970)return 5; if(mb<980)return 4; if(mb<990)return 3; if(mb<1000)return 2; if(mb<1008)return 1; return 0; }
-  function tempFactor(f){ if(f<=10)return 1; if(f<=20)return .85; if(f<=26)return .7; if(f<=30)return .5; if(f<=32)return .35; if(f<=34)return .2; if(f<=37)return .08; return 0; }
+  function tempFactor(f){ if(f<=10)return 1; if(f<=20)return .9; if(f<=26)return .78; if(f<=32)return .6; if(f<=40)return .45; if(f<=50)return .32; if(f<=60)return .18; return .08; }
   const SN=[2,5,10,15,30,45,60,80], BZ=[5,15,30,45,60,75,90], SQ=[5,15,30,45,60];
   function pick(scale,score){ if(score<=.05)return 0; return scale[Math.min(scale.length-1,Math.round(score*(scale.length-1)))]; }
   function cigOf(maxc,score){ if(score<=.1)return 0; return Math.min(maxc,Math.max(1,Math.round(score*maxc))); }
-  function risks(mb,tempF){
-    const r=pressRank(mb), tf=tempFactor(tempF), p01=r/6;
+  function risks(rank,tempF){
+    const r=rank, tf=tempFactor(tempF), p01=r/6;
     const snS=p01*tf, bzS=p01*Math.pow(tf,0.6), sqS=p01*tf*.9;
     return {
       snownado:{p:pick(SN,snS),cig:cigOf(4,snS),score:snS},
@@ -969,7 +969,7 @@ SPC.tabs.show('outlook');
     pts.push([Math.round((cx+rad*Math.cos(a))*10)/10, Math.round((cy+rad*Math.sin(a))*10)/10]); } return pts; }
 
   // module-local inputs (persist across re-renders; products live in D.*)
-  const inp={mb:984,tempF:18,size:220,cityName:'Buffalo, NY',overOcean:false,oceanDist:0,dir:'E'};
+  const inp={mb:984,noLow:false,tempF:18,size:220,noEdge:false,cityName:'Buffalo, NY',overOcean:false,oceanDist:0,dir:'E'};
   let last=null;
 
   function cityIdx(){ return CITIES.findIndex(c=>c.name===inp.cityName); }
@@ -980,7 +980,9 @@ SPC.tabs.show('outlook');
     let [cx,cy]=proj(city.lat,city.lon);
     if(inp.overOcean&&inp.oceanDist>0){ const v=DIRV[inp.dir]||[0,0]; cx+=v[0]*inp.oceanDist*PXMI; cy+=v[1]*inp.oceanDist*PXMI; }
     const loc=(inp.overOcean&&inp.oceanDist>0)?('~'+inp.oceanDist+' mi '+inp.dir+' of '+city.name):('over '+city.name);
-    const R=risks(inp.mb,inp.tempF), rank=pressRank(inp.mb), sizePx=Math.max(24,inp.size*PXMI);
+    const rank=inp.noLow?1:pressRank(inp.mb);
+    const R=risks(rank,inp.tempF), sizePx=Math.max(24,(inp.noEdge?400:inp.size)*PXMI);
+    const pressStr=inp.noLow?'no closed low':(inp.mb+' mb'), sizeStr=inp.noEdge?'no determined edge':(inp.size+' mi');
     // OUTLOOK: nested contours per hazard
     const OL=D.outlook; OL.day=1; OL.panel='categorical';
     const SCALES={snownado:SN,blizzardWind:BZ,snowSquall:SQ};
@@ -1006,9 +1008,11 @@ SPC.tabs.show('outlook');
     WG.areas=[{points:circle(cx,cy,sizePx*0.45)}]; WG.wfo=city.name;
     // HWO spotter
     const H=D.hwo; H.spotterLevel=[0,1,2,3,4,4,5][tr]||0; H.spotter=(H.spotterLevel>=2);
-    H.days[0]='Extratropical cyclone ('+inp.mb+' mb, core '+inp.tempF+'F) '+loc+' producing '+tier.name.toLowerCase()+'-risk convective snow.';
-    const inFoot=CITIES.filter(c=>haversine(city,c)<=inp.size).map(c=>c.name);
-    last={city:city.name,loc:loc,warm:(inp.tempF>34),tier:tier.name,dom,R,rank,inFoot,
+    H.days[0]='Extratropical cyclone ('+pressStr+', core '+inp.tempF+'F) '+loc+' producing '+tier.name.toLowerCase()+'-risk convective snow.';
+    const coreLL={lat:(cy-1176.93)/-23.1797,lon:(cx-2050.93)/15.8463};
+    const footR=inp.noEdge?400:inp.size;
+    const inFoot=CITIES.filter(c=>haversine(coreLL,c)<=footR).map(c=>c.name);
+    last={city:city.name,loc:loc,pressStr:pressStr,sizeStr:sizeStr,warm:(inp.tempF>32),tier:tier.name,dom,R,rank,inFoot,footR:footR,
           md:{concerning:dom,watchProb:MD.watchProb,gamma:MD.mesoGamma},
           watch:{type:WA.type,level:WA.level}, warn:{type:WG.type,level:WG.level}, spot:H.spotterLevel};
     SPC.tabs.show('cyclone');
@@ -1016,9 +1020,11 @@ SPC.tabs.show('outlook');
 
   function tools(el){
     el.innerHTML='<h2 class="sec">Cyclone Inputs</h2>'+
-      '<label>Central pressure (mb)</label><input id="cyMb" type="number" value="'+inp.mb+'" style="width:100%">'+
+      '<label>Central pressure (mb)</label><input id="cyMb" type="number" value="'+inp.mb+'" style="width:100%" '+(inp.noLow?"disabled":"")+'>'+
+      '<label style="margin-top:2px;color:#cfe2f7"><input type="checkbox" id="cyNoLow" '+(inp.noLow?"checked":"")+'> No closed low (open wave)</label>'+
       '<label>Core temperature (°F)</label><input id="cyT" type="number" value="'+inp.tempF+'" style="width:100%">'+
-      '<label>Size — effective radius (mi)</label><input id="cySz" type="number" value="'+inp.size+'" style="width:100%">'+
+      '<label>Size — effective radius (mi)</label><input id="cySz" type="number" value="'+inp.size+'" style="width:100%" '+(inp.noEdge?"disabled":"")+'>'+
+      '<label style="margin-top:2px;color:#cfe2f7"><input type="checkbox" id="cyNoEdge" '+(inp.noEdge?"checked":"")+'> No determined edge (diffuse)</label>'+
       '<label>Core city / nearest US city</label><input id="cyCity" list="cyCityList" value="'+inp.cityName.replace(/"/g,"&quot;")+'" style="width:100%" placeholder="type to search…">'+
       '<datalist id="cyCityList">'+CITIES.map(c=>"<option value=\""+c.name+"\">").join("")+'</datalist>'+
       '<label style="margin-top:8px"><input type="checkbox" id="cyOcean" '+(inp.overOcean?"checked":"")+'> Core offset from city (ocean / another country)</label>'+
@@ -1027,8 +1033,10 @@ SPC.tabs.show('outlook');
       '<div style="margin-top:10px"><button id="cyGen" style="background:var(--accent);color:#06131f;border-color:var(--accent);font-weight:600">⚡ Generate all products</button></div>'+
       '<div id="cyHint" style="color:#8aa0bd;font-size:12px;margin-top:6px">Sets pressure/temp/size and a core city, then drafts the Outlook, Mesoscale Discussion, Watch, Warning, and HWO automatically.</div>';
     el.querySelector('#cyMb').onchange=e=>{inp.mb=+e.target.value;};
+    el.querySelector('#cyNoLow').onchange=e=>{inp.noLow=e.target.checked;tools(el);};
     el.querySelector('#cyT').onchange=e=>{inp.tempF=+e.target.value;};
     el.querySelector('#cySz').onchange=e=>{inp.size=+e.target.value;};
+    el.querySelector('#cyNoEdge').onchange=e=>{inp.noEdge=e.target.checked;tools(el);};
     el.querySelector('#cyCity').onchange=e=>{inp.cityName=e.target.value;};
     el.querySelector('#cyOcean').onchange=e=>{inp.overOcean=e.target.checked;el.querySelector('#cyOceanWrap').style.display=inp.overOcean?'':'none';};
     el.querySelector('#cyDist').onchange=e=>{inp.oceanDist=+e.target.value;};
@@ -1047,8 +1055,8 @@ SPC.tabs.show('outlook');
     if(!last){ el.innerHTML='<p style="color:#8aa0bd">Enter cyclone parameters and press <strong>Generate all products</strong>. A summary of every issued product will appear here.</p>'; return; }
     const L=[];
     L.push('CYCLONE OVERRIDE — AUTO-GENERATED SUITE');
-    L.push('Core: '+last.loc+'   Pressure: '+inp.mb+' mb   Core temp: '+inp.tempF+'°F   Size: '+inp.size+' mi');
-    if(last.warm) L.push('** CORE ABOVE FREEZING — primarily rain/mixed; minimal frozen-precip products. **');
+    L.push('Core: '+last.loc+'   Pressure: '+last.pressStr+'   Core temp: '+inp.tempF+'°F   Size: '+last.sizeStr);
+    if(last.warm) L.push('** CORE ABOVE FREEZING — rain/mix increasingly likely; frozen-precip coverage reduced. **');
     L.push('');
     L.push('CATEGORICAL OUTLOOK......'+last.tier.toUpperCase()+' RISK (dominant: '+T.HAZARDS[last.dom].name+')');
     L.push('  Snownado '+last.R.snownado.p+'% / CIG'+last.R.snownado.cig+'   Blizzard '+last.R.blizzardWind.p+'% / CIG'+last.R.blizzardWind.cig+'   Squall '+last.R.snowSquall.p+'% / CIG'+last.R.snowSquall.cig);
@@ -1057,7 +1065,7 @@ SPC.tabs.show('outlook');
     L.push('WARNING..................'+(last.warn.level==='Emergency'?(last.warn.type.toUpperCase()+' EMERGENCY'):((last.warn.level==='Normal'?'':last.warn.level+' ')+last.warn.type.toUpperCase()+' WARNING')));
     L.push('HWO SPOTTERS.............level '+last.spot);
     L.push('');
-    L.push('CITIES IN FOOTPRINT ('+last.inFoot.length+' within '+inp.size+' mi):');
+    L.push('CITIES IN FOOTPRINT ('+last.inFoot.length+' within '+last.footR+' mi'+(inp.noEdge?' (undetermined edge)':'')+'):');
     L.push('  '+(last.inFoot.length?last.inFoot.slice(0,40).join(', ')+(last.inFoot.length>40?'…':''):'(none in list — open ocean or sparse area)'));
     el.innerHTML='<div class="preview-text" id="cyText"></div>'+
       '<div style="margin-top:8px;color:#8aa0bd;font-size:12px">Products populated — open the Outlook, Mesoscale Discussion, Watch, Warning, and HWO tabs to review and refine.</div>'+
