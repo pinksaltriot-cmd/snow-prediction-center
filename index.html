@@ -355,9 +355,17 @@ SPC.outlook = (function(){
     if(S.panel==='categorical'){
       lv.innerHTML='<p style="color:#8aa0bd;font-size:12px;margin:2px 0">Computed automatically from the three drawn risks — not drawn directly.</p>';
     } else {
-      levelOptions().forEach(o=>{const b=document.createElement('button');b.textContent=o.label;
-        b.style.borderLeft='6px solid '+o.color; b.className=curLevel===o.v?'active':'';
-        b.onclick=()=>{curLevel=o.v;tools(el);};lv.appendChild(b);});
+      // Level selector is a dropdown menu (probability % up to 80, plus CIG intensity).
+      const hz=T.HAZARDS[S.panel];
+      const probOpts=hz.probs.map(p=>'<option value="p'+p+'">'+p+'%</option>').join('');
+      const cigOpts=hz.cigs.map(c=>'<option value="cig'+c+'">CIG'+c+'</option>').join('');
+      const sel=document.createElement('select'); sel.id='olLevelSel'; sel.style.width='100%';
+      sel.innerHTML='<option value="">— pick a level —</option>'+
+        '<optgroup label="Probability">'+probOpts+'</optgroup>'+
+        '<optgroup label="Conditional intensity">'+cigOpts+'</optgroup>';
+      sel.value=curLevel||'';
+      sel.onchange=e=>{curLevel=e.target.value||null;};
+      lv.appendChild(sel);
     }
     el.querySelector('#olNote').textContent = S.panel==='categorical'
       ? 'Switch to a hazard panel to draw. The categorical envelope updates here as an output.'
