@@ -52,6 +52,7 @@
     <button data-tab="warning">Warning</button>
     <button data-tab="hwo">HWO / Hydro</button>
     <button data-tab="reports">Storm Reports</button>
+    <button data-tab="cyclone">🌀 Cyclone Override</button>
   </nav>
   <div style="display:flex;gap:6px">
     <button id="btnSave">Save</button><button id="btnLoad">Load</button><button id="btnReset">Reset</button>
@@ -302,7 +303,7 @@ SPC.tabs = (function(){
   return {register,show,get current(){return current;}};
 })();
 // Placeholder renderers so tabs work before product sections land:
-['outlook','md','watch','warning','hwo','reports'].forEach(k=>{
+['outlook','md','watch','warning','hwo','reports','cyclone'].forEach(k=>{
   if(!SPC.tabs) return;
   SPC.tabs.register(k,{tools:el=>el.innerHTML='<p style="color:#8aa0bd">'+k+' tools…</p>',
                        preview:el=>el.innerHTML='<div class="preview-text">'+k+' preview…</div>'});
@@ -926,6 +927,141 @@ SPC.tabs.show('outlook');
     el.innerHTML=html;
   }
   _setPrev(prev2);
+})();
+</script>
+<script>
+// ===== SECTION J: CYCLONE OVERRIDE =====
+(function(){
+  const T=SPC.tax, D=SPC.state.doc;
+  const CITY_RAW = [
+["New York, NY",40.7,-74],["Philadelphia, PA",40,-75.2],["Boston, MA",42.4,-71.1],["Pittsburgh, PA",40.4,-80],["Newark, NJ",40.7,-74.2],["Buffalo, NY",42.9,-78.9],["Rochester, NY",43.2,-77.6],["Syracuse, NY",43,-76.1],["Albany, NY",42.7,-73.8],["Hartford, CT",41.8,-72.7],["Providence, RI",41.8,-71.4],["Bridgeport, CT",41.2,-73.2],["New Haven, CT",41.3,-72.9],["Scranton, PA",41.4,-75.7],["Allentown, PA",40.6,-75.5],["Trenton, NJ",40.2,-74.8],["Binghamton, NY",42.1,-75.9],["Portland, ME",43.7,-70.3],["Burlington, VT",44.5,-73.2],["Manchester, NH",43,-71.5],["Bangor, ME",44.8,-68.8],["Concord, NH",43.2,-71.5],["Montpelier, VT",44.3,-72.6],["Worcester, MA",42.3,-71.8],["Springfield, MA",42.1,-72.6],["Erie, PA",42.1,-80.1],["Utica, NY",43.1,-75.2],["Watertown, NY",43.9,-75.9],["Atlantic City, NJ",39.4,-74.4],["Washington, DC",38.9,-77],["Baltimore, MD",39.3,-76.6],["Williamsport, PA",41.2,-77],["Ithaca, NY",42.4,-76.5],["Rutland, VT",43.6,-72.97],["Plattsburgh, NY",44.7,-73.5],["Glens Falls, NY",43.3,-73.6],["Atlanta, GA",33.7,-84.4],["Charlotte, NC",35.2,-80.8],["Raleigh, NC",35.8,-78.6],["Richmond, VA",37.5,-77.4],["Virginia Beach, VA",36.9,-76],["Jacksonville, FL",30.3,-81.7],["Charleston, SC",32.8,-79.9],["Columbia, SC",34,-81],["Greensboro, NC",36.1,-79.8],["Winston-Salem, NC",36.1,-80.2],["Durham, NC",36,-78.9],["Savannah, GA",32.1,-81.1],["Greenville, SC",34.9,-82.4],["Asheville, NC",35.6,-82.6],["Knoxville, TN",35.9,-83.9],["Chattanooga, TN",35,-85.3],["Wilmington, NC",34.2,-77.9],["Norfolk, VA",36.8,-76.3],["Fayetteville, NC",35.1,-78.9],["Augusta, GA",33.5,-82],["Macon, GA",32.8,-83.6],["Lynchburg, VA",37.4,-79.1],["Roanoke, VA",37.3,-79.9],["Bristol, VA",36.6,-82.2],["Hickory, NC",35.7,-81.3],["Florence, SC",34.2,-79.8],["Bainbridge, GA",30.9,-84.6],["Albany, GA",31.6,-84.2],["Tallahassee, FL",30.4,-84.3],["Orlando, FL",28.5,-81.4],["Miami, FL",25.8,-80.2],["Tampa, FL",27.95,-82.5],["Fort Lauderdale, FL",26.1,-80.1],["West Palm Beach, FL",26.7,-80.05],["Cape Hatteras, NC",35.22,-75.63],["New Bern, NC",35.11,-77.04],["Kinston, NC",35.26,-77.58],["Manteo, NC",35.91,-75.67],["Columbus, GA",32.46,-84.99],["Brunswick, GA",31.15,-81.49],["Alma, GA",31.54,-82.46],["Waycross, GA",31.21,-82.36],["Gainesville, FL",29.65,-82.32],["Daytona Beach, FL",29.21,-81.02],["Apalachicola, FL",29.73,-84.99],["Pensacola, FL",30.42,-87.22],["Crestview, FL",30.76,-86.57],["Chicago, IL",41.9,-87.6],["Detroit, MI",42.3,-83],["Columbus, OH",40,-82.9],["Indianapolis, IN",39.8,-86.2],["Cleveland, OH",41.5,-81.7],["Cincinnati, OH",39.1,-84.5],["Louisville, KY",38.3,-85.8],["Nashville, TN",36.2,-86.8],["Milwaukee, WI",43,-87.9],["St. Louis, MO",38.6,-90.2],["Grand Rapids, MI",43,-85.7],["Akron, OH",41.1,-81.5],["Dayton, OH",39.8,-84.2],["Toledo, OH",41.7,-83.5],["Fort Wayne, IN",41.1,-85.1],["Lexington, KY",38,-84.5],["Evansville, IN",38,-87.6],["South Bend, IN",41.7,-86.3],["Springfield, IL",39.8,-89.6],["Peoria, IL",40.7,-89.6],["Rockford, IL",42.3,-89.1],["Lansing, MI",42.7,-84.6],["Kalamazoo, MI",42.3,-85.6],["Canton, OH",40.8,-81.4],["Youngstown, OH",41.1,-80.6],["Flint, MI",43,-83.7],["Ann Arbor, MI",42.3,-83.7],["Madison, WI",43.1,-89.4],["Green Bay, WI",44.5,-88],["Champaign, IL",40.1,-88.2],["Decatur, IL",39.8,-88.9],["Bloomington, IL",40.5,-89],["Terre Haute, IN",39.5,-87.4],["Muncie, IN",40.2,-85.4],["Bowling Green, KY",37,-86.4],["Paducah, KY",37.1,-88.6],["Owensboro, KY",37.8,-87.1],["Zanesville, OH",39.9,-82],["Mansfield, OH",40.8,-82.5],["Lima, OH",40.7,-84.1],["Saginaw, MI",43.4,-84],["Traverse City, MI",44.8,-85.6],["Marquette, MI",46.5,-87.4],["Appleton, WI",44.3,-88.4],["Oshkosh, WI",44,-88.5],["Wausau, WI",44.9,-89.6],["Muskegon, MI",43.2,-86.2],["Minneapolis, MN",44.98,-93.3],["St. Paul, MN",44.9,-93.1],["Des Moines, IA",41.6,-93.6],["Omaha, NE",41.3,-96],["Duluth, MN",46.8,-92.1],["Sioux Falls, SD",43.5,-96.7],["Rochester, MN",44,-92.5],["Cedar Rapids, IA",42,-91.6],["Davenport, IA",41.5,-90.6],["Fargo, ND",46.9,-96.8],["Bismarck, ND",46.8,-100.8],["Rapid City, SD",44.1,-103.2],["Lincoln, NE",40.8,-96.7],["Grand Forks, ND",47.9,-97],["Eau Claire, WI",44.8,-91.5],["La Crosse, WI",43.8,-91.2],["Mankato, MN",44.2,-94],["Waterloo, IA",42.5,-92.3],["Mason City, IA",43.2,-93.2],["Aberdeen, SD",45.5,-98.5],["Sioux City, IA",42.5,-96.4],["St. Cloud, MN",45.6,-94.2],["Bemidji, MN",47.5,-94.9],["International Falls, MN",48.6,-93.4],["Mitchell, SD",43.7,-98],["Pierre, SD",44.4,-100.4],["Minot, ND",48.2,-101.3],["Williston, ND",48.1,-103.6],["Dubuque, IA",42.5,-90.7],["Iowa City, IA",41.7,-91.5],["Ames, IA",42,-93.6],["Dallas, TX",32.8,-96.8],["Houston, TX",29.8,-95.4],["San Antonio, TX",29.4,-98.5],["Austin, TX",30.3,-97.7],["Memphis, TN",35.1,-90],["Oklahoma City, OK",35.5,-97.5],["Tulsa, OK",36.2,-96],["Little Rock, AR",34.7,-92.3],["New Orleans, LA",30,-90.1],["Birmingham, AL",33.5,-86.8],["Jackson, MS",32.3,-90.2],["Shreveport, LA",32.5,-93.8],["Fort Worth, TX",32.7,-97.3],["El Paso, TX",31.8,-106.4],["Amarillo, TX",35.2,-101.8],["Pampa, TX",35.54,-100.96],["Lubbock, TX",33.6,-101.8],["Waco, TX",31.5,-97.1],["Montgomery, AL",32.4,-86.3],["Mobile, AL",30.7,-88],["Baton Rouge, LA",30.5,-91.1],["Huntsville, AL",34.7,-86.6],["Wichita, KS",37.7,-97.3],["Topeka, KS",39.1,-95.7],["Springfield, MO",37.2,-93.3],["Kansas City, MO",39.1,-94.6],["Joplin, MO",37.1,-94.5],["Columbia, MO",38.9,-92.3],["Fayetteville, AR",36.1,-94.2],["Jonesboro, AR",35.8,-90.7],["Cape Girardeau, MO",37.3,-89.5],["Jefferson City, MO",38.6,-92.2],["St. Joseph, MO",39.8,-94.8],["Texarkana, TX",33.4,-94],["Pine Bluff, AR",34.2,-92],["Fort Smith, AR",35.4,-94.4],["Abilene, TX",32.4,-99.7],["Midland, TX",32,-102.1],["Corpus Christi, TX",27.8,-97.4],["Tyler, TX",32.4,-95.3],["Lawton, OK",34.6,-98.4],["Enid, OK",36.4,-97.9],["Dodge City, KS",37.8,-100],["Las Cruces, NM",32.3,-106.7],["Del Rio, TX",29.4,-100.9],["Wichita Falls, TX",33.9,-98.5],["Galveston, TX",29.3,-94.8],["Central Owasso, OK",36.27,-95.85],["North Owasso, OK",36.31,-95.85],["South Owasso, OK",36.25,-95.86],["Owasso Outskirts, OK",36.28,-95.92],["Jenks, OK",36.02,-95.97],["Bixby, OK",35.94,-95.88],["Broken Arrow, OK",36.06,-95.79],["Denver, CO",39.7,-105],["Salt Lake City, UT",40.8,-111.9],["Boise, ID",43.6,-116.2],["Billings, MT",45.8,-108.5],["Cheyenne, WY",41.1,-104.8],["Missoula, MT",46.9,-114],["Great Falls, MT",47.5,-111.3],["Casper, WY",42.9,-106.3],["Helena, MT",46.6,-112],["Pocatello, ID",42.9,-112.4],["Idaho Falls, ID",43.5,-112],["Colorado Springs, CO",38.8,-104.8],["Fort Collins, CO",40.6,-105.1],["Boulder, CO",40,-105.3],["Pueblo, CO",38.3,-104.6],["Provo, UT",40.2,-111.7],["Ogden, UT",41.2,-111.97],["Laramie, WY",41.3,-105.6],["Twin Falls, ID",42.6,-114.5],["Logan, UT",41.7,-111.8],["Bozeman, MT",45.7,-111],["Butte, MT",46,-112.5],["Kalispell, MT",48.2,-114.3],["Sheridan, WY",44.8,-106.96],["Rock Springs, WY",41.6,-109.2],["Durango, CO",37.3,-107.9],["Ada, OK",34.77,-96.68],["Okemah, OK",35.43,-96.31],["Coffeyville, KS",37.04,-95.62],["Emporia, KS",38.4,-96.18],["Ottawa, KS",38.61,-95.27],["Excelsior Springs, MO",39.34,-94.23],["Chillicothe, MO",39.8,-93.55],["Bethany, MO",40.27,-94.03],["Grinnell, IA",41.74,-92.72]
+];
+  const CITIES = CITY_RAW.map(c=>({name:c[0],lat:c[1],lon:c[2]}));
+  // lat/lon -> SVG (linear fit calibrated to the basemap state centroids)
+  function proj(lat,lon){ return [15.8463*lon+2050.93, -23.1797*lat+1176.93]; }
+  const US_CENTER=proj(39.8,-98.6);
+  const PXMI=0.31; // approx px per mile on the basemap
+  function haversine(a,b){ const R=3959,dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;
+    const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s)); }
+
+  // ---- physics ----
+  function pressRank(mb){ if(mb<960)return 6; if(mb<970)return 5; if(mb<980)return 4; if(mb<990)return 3; if(mb<1000)return 2; if(mb<1008)return 1; return 0; }
+  function tempFactor(f){ if(f<=10)return 1; if(f<=20)return .85; if(f<=28)return .65; if(f<=32)return .45; return .15; }
+  const SN=[2,5,10,15,30,45,60,80], BZ=[5,15,30,45,60,75,90], SQ=[5,15,30,45,60];
+  function pick(scale,score){ if(score<=.05)return 0; return scale[Math.min(scale.length-1,Math.round(score*(scale.length-1)))]; }
+  function cigOf(maxc,score){ if(score<=.1)return 0; return Math.min(maxc,Math.max(1,Math.round(score*maxc))); }
+  function risks(mb,tempF){
+    const r=pressRank(mb), tf=tempFactor(tempF), p01=r/6;
+    const snS=p01*tf, bzS=p01*(tf>.15?1:.5), sqS=p01*tf*.9;
+    return {
+      snownado:{p:pick(SN,snS),cig:cigOf(4,snS),score:snS},
+      blizzardWind:{p:pick(BZ,bzS),cig:cigOf(3,bzS),score:bzS},
+      snowSquall:{p:pick(SQ,sqS),cig:cigOf(2,sqS),score:sqS}
+    };
+  }
+  function dominant(R){ const o=[['snownado',R.snownado.score],['blizzardWind',R.blizzardWind.score],['snowSquall',R.snowSquall.score]];
+    o.sort((a,b)=>b[1]-a[1]); return o[0][0]; }
+  function lev(s){ return s>=.75?'Extreme':s>=.5?'High':s>=.25?'Moderate':'Low'; }
+
+  function circle(cx,cy,rad,nn){ const pts=[]; nn=nn||28; for(let i=0;i<nn;i++){ const a=2*Math.PI*i/nn;
+    pts.push([Math.round((cx+rad*Math.cos(a))*10)/10, Math.round((cy+rad*Math.sin(a))*10)/10]); } return pts; }
+
+  // module-local inputs (persist across re-renders; products live in D.*)
+  const inp={mb:984,tempF:18,size:220,cityName:'Buffalo, NY',overOcean:false,oceanDist:0};
+  let last=null;
+
+  function cityIdx(){ return CITIES.findIndex(c=>c.name===inp.cityName); }
+
+  function generate(){
+    const ci=cityIdx(); if(ci<0){alert('Pick a core city from the list.');return;}
+    const city=CITIES[ci];
+    let [cx,cy]=proj(city.lat,city.lon);
+    if(inp.overOcean&&inp.oceanDist>0){ let dx=cx-US_CENTER[0],dy=cy-US_CENTER[1],L=Math.hypot(dx,dy)||1;
+      cx+=dx/L*inp.oceanDist*PXMI; cy+=dy/L*inp.oceanDist*PXMI; }
+    const R=risks(inp.mb,inp.tempF), rank=pressRank(inp.mb), sizePx=Math.max(24,inp.size*PXMI);
+    // OUTLOOK: nested contours per hazard
+    const OL=D.outlook; OL.day=1; OL.panel='categorical';
+    const SCALES={snownado:SN,blizzardWind:BZ,snowSquall:SQ};
+    ['snownado','blizzardWind','snowSquall'].forEach(h=>{ OL.areas[h]=[]; OL.areas['cig_'+h]=[];
+      const peak=R[h].p; if(!peak)return; const scale=SCALES[h].filter(v=>v<=peak), m=scale.length;
+      scale.forEach((v,i)=>{ const rad=sizePx*(1-0.7*(i/Math.max(1,m-1))); OL.areas[h].push({points:circle(cx,cy,rad),level:'p'+v,day:1}); });
+      const pc=R[h].cig; for(let c=1;c<=pc;c++){ const rad=sizePx*0.5*(1-0.55*((c-1)/Math.max(1,pc-1))); OL.areas['cig_'+h].push({points:circle(cx,cy,rad),level:'cig'+c,day:1}); }
+    });
+    const dom=dominant(R), tierKey=SPC.outlook.suggestTier(), tier=T.tier(tierKey);
+    // MESOSCALE DISCUSSION
+    const MD=D.md; MD.concerning=dom; MD.watchProb=Math.min(100,Math.round((rank/6)*100));
+    MD.mesoGamma=(inp.size<=120 && rank>=4); MD.areas=[{points:circle(cx,cy,sizePx*0.6)}]; MD.number=MD.number||1;
+    // WATCH
+    const WA=D.watch; WA.type=(dom==='snownado'?'Snownado':'Blizzard');
+    WA.level=(rank>=5?'PDS':rank>=3?'DS':'Normal'); WA.pds=(WA.level==='PDS');
+    WA.areas=[{points:circle(cx,cy,sizePx*0.8)}]; WA.number=WA.number||1;
+    WA.probTable={snownado:lev(R.snownado.score),w2:lev(R.snownado.cig/4),wind60:lev(R.blizzardWind.score),squall4:lev(R.snowSquall.score)};
+    // WARNING
+    const WG=D.warning; WG.type=(dom==='snownado'?'Snownado':dom==='snowSquall'?'Snow Squall':'Blizzard');
+    const canEmg=(WG.type==='Blizzard'||WG.type==='Snownado');
+    WG.level=(rank>=6&&canEmg?'Emergency':rank>=5?'PDS':rank>=3?'DS':'Normal'); WG.emergency=(WG.level==='Emergency');
+    WG.areas=[{points:circle(cx,cy,sizePx*0.45)}]; WG.wfo=city.name;
+    // HWO spotter
+    const H=D.hwo; const tr=tier.rank; H.spotterLevel=[0,1,2,3,4,4,5][tr]||0; H.spotter=(H.spotterLevel>=2);
+    H.days[0]='Extratropical cyclone ('+inp.mb+' mb, core '+inp.tempF+'F) '+(inp.overOcean?('~'+inp.oceanDist+' mi off '+city.name):('over '+city.name))+' producing '+tier.name.toLowerCase()+'-risk convective snow.';
+    const inFoot=CITIES.filter(c=>haversine(city,c)<=inp.size).map(c=>c.name);
+    last={city:city.name,tier:tier.name,dom,R,rank,inFoot,
+          md:{concerning:dom,watchProb:MD.watchProb,gamma:MD.mesoGamma},
+          watch:{type:WA.type,level:WA.level}, warn:{type:WG.type,level:WG.level}, spot:H.spotterLevel};
+    SPC.tabs.show('cyclone');
+  }
+
+  function tools(el){
+    el.innerHTML='<h2 class="sec">Cyclone Inputs</h2>'+
+      '<label>Central pressure (mb)</label><input id="cyMb" type="number" value="'+inp.mb+'" style="width:100%">'+
+      '<label>Core temperature (°F)</label><input id="cyT" type="number" value="'+inp.tempF+'" style="width:100%">'+
+      '<label>Size — effective radius (mi)</label><input id="cySz" type="number" value="'+inp.size+'" style="width:100%">'+
+      '<label>Core city</label><input id="cyCity" list="cyCityList" value="'+inp.cityName.replace(/"/g,"&quot;")+'" style="width:100%" placeholder="type to search…">'+
+      '<datalist id="cyCityList">'+CITIES.map(c=>"<option value=\""+c.name+"\">").join("")+'</datalist>'+
+      '<label style="margin-top:8px"><input type="checkbox" id="cyOcean" '+(inp.overOcean?"checked":"")+'> Core over ocean (use nearest city + distance)</label>'+
+      '<div id="cyOceanWrap" style="'+(inp.overOcean?"":"display:none")+'"><label>Distance offshore from city (mi)</label><input id="cyDist" type="number" value="'+inp.oceanDist+'" style="width:100%"></div>'+
+      '<div style="margin-top:10px"><button id="cyGen" style="background:var(--accent);color:#06131f;border-color:var(--accent);font-weight:600">⚡ Generate all products</button></div>'+
+      '<div id="cyHint" style="color:#8aa0bd;font-size:12px;margin-top:6px">Sets pressure/temp/size and a core city, then drafts the Outlook, Mesoscale Discussion, Watch, Warning, and HWO automatically.</div>';
+    el.querySelector('#cyMb').onchange=e=>{inp.mb=+e.target.value;};
+    el.querySelector('#cyT').onchange=e=>{inp.tempF=+e.target.value;};
+    el.querySelector('#cySz').onchange=e=>{inp.size=+e.target.value;};
+    el.querySelector('#cyCity').onchange=e=>{inp.cityName=e.target.value;};
+    el.querySelector('#cyOcean').onchange=e=>{inp.overOcean=e.target.checked;el.querySelector('#cyOceanWrap').style.display=inp.overOcean?'':'none';};
+    el.querySelector('#cyDist').onchange=e=>{inp.oceanDist=+e.target.value;};
+    el.querySelector('#cyGen').onclick=generate;
+  }
+  function render(){
+    const polys=[];
+    ['snowSquall','blizzardWind','snownado'].forEach(h=>{
+      (D.outlook.areas[h]||[]).filter(a=>a.day==1).forEach(a=>{ const p=+String(a.level).slice(1);
+        if(isNaN(p))return; polys.push({points:a.points,fill:T.PROB_COLORS[p]||'#888',opacity:0.22,stroke:T.HAZARDS[h].color,strokeWidth:1}); });
+    });
+    SPC.map.renderPolys(polys);
+  }
+  function preview(el){
+    if(!last){ el.innerHTML='<p style="color:#8aa0bd">Enter cyclone parameters and press <strong>Generate all products</strong>. A summary of every issued product will appear here.</p>'; return; }
+    const L=[];
+    L.push('CYCLONE OVERRIDE — AUTO-GENERATED SUITE');
+    L.push('Core: '+last.city+'   Pressure: '+inp.mb+' mb   Core temp: '+inp.tempF+'°F   Size: '+inp.size+' mi');
+    L.push('');
+    L.push('CATEGORICAL OUTLOOK......'+last.tier.toUpperCase()+' RISK (dominant: '+T.HAZARDS[last.dom].name+')');
+    L.push('  Snownado '+last.R.snownado.p+'% / CIG'+last.R.snownado.cig+'   Blizzard '+last.R.blizzardWind.p+'% / CIG'+last.R.blizzardWind.cig+'   Squall '+last.R.snowSquall.p+'% / CIG'+last.R.snowSquall.cig);
+    L.push('MESOSCALE DISCUSSION.....'+(last.md.gamma?'MESO-GAMMA, ':'')+'watch prob '+last.md.watchProb+'%');
+    L.push('WATCH....................'+(last.watch.level==='Normal'?'':last.watch.level+' ')+last.watch.type.toUpperCase()+' WATCH');
+    L.push('WARNING..................'+(last.warn.level==='Emergency'?(last.warn.type.toUpperCase()+' EMERGENCY'):((last.warn.level==='Normal'?'':last.warn.level+' ')+last.warn.type.toUpperCase()+' WARNING')));
+    L.push('HWO SPOTTERS.............level '+last.spot);
+    L.push('');
+    L.push('CITIES IN FOOTPRINT ('+last.inFoot.length+' within '+inp.size+' mi):');
+    L.push('  '+(last.inFoot.length?last.inFoot.slice(0,40).join(', ')+(last.inFoot.length>40?'…':''):'(none in list — open ocean or sparse area)'));
+    el.innerHTML='<div class="preview-text" id="cyText"></div>'+
+      '<div style="margin-top:8px;color:#8aa0bd;font-size:12px">Products populated — open the Outlook, Mesoscale Discussion, Watch, Warning, and HWO tabs to review and refine.</div>'+
+      '<div style="margin-top:8px"><button id="cyPng">⬇ PNG</button> <button id="cyCopy">⧉ Copy summary</button></div>';
+    el.querySelector('#cyText').textContent=L.join('\n');
+    el.querySelector('#cyPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='cyclone-override.png';a.click();});
+    el.querySelector('#cyCopy').onclick=()=>SPC.state.copyText(L.join('\n'));
+  }
+  SPC.tabs.register('cyclone',{tools,preview,render});
 })();
 </script>
 <script>
