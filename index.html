@@ -558,5 +558,45 @@ SPC.tabs.show('outlook');
   SPC.tabs.register('hwo',{tools,preview:prev});
 })();
 </script>
+<script>
+// ===== SECTION H: STORM REPORTS + VERIFICATION =====
+(function(){
+  const T=SPC.tax, OL=SPC.state.doc.outlook;
+  // Live reference to the reports array (re-read each access so save/load reassignment is respected).
+  function R(){ return SPC.state.doc.reports; }
+  function tools(el){
+    el.innerHTML='<h2 class="sec">Log a notable snownado</h2>'+
+      '<label>City (any place, metropolis to village)</label><input id="rCity" placeholder="e.g. Marquette, MI" style="width:100%">'+
+      '<label>Whiteout rating</label><select id="rW">'+T.WHITEOUT.map(w=>'<option value="'+w.t+'">'+w.t+' — '+w.name+' ('+w.lo+'–'+(w.hi>998?'∞':w.hi)+' mph)</option>').join('')+'</select>'+
+      '<label>Notability</label><select id="rNote">'+T.NOTABILITY.map(n=>'<option>'+n+'</option>').join('')+'</select>'+
+      '<label>Name (optional)</label><input id="rName" placeholder="e.g. The Marquette Maelstrom" style="width:100%">'+
+      '<div style="margin-top:8px"><button id="rAdd">+ Add report</button></div>'+
+      '<h2 class="sec">Filter</h2><select id="rFilter"><option value="">All notability</option>'+T.NOTABILITY.map(n=>'<option>'+n+'</option>').join('')+'</select>'+
+      '<h2 class="sec">Logged reports</h2><div id="rList"></div>';
+    el.querySelector('#rAdd').onclick=()=>{
+      const city=el.querySelector('#rCity').value.trim(); if(!city){alert('Enter a city');return;}
+      R().push({city,w:el.querySelector('#rW').value,note:el.querySelector('#rNote').value,name:el.querySelector('#rName').value.trim()});
+      el.querySelector('#rCity').value='';el.querySelector('#rName').value='';
+      renderList(el);prev();
+    };
+    el.querySelector('#rFilter').onchange=()=>renderList(el);
+    renderList(el);
+  }
+  function renderList(el){
+    const f=el.querySelector('#rFilter').value;
+    const list=el.querySelector('#rList'); list.innerHTML='';
+    R().forEach((r,i)=>{ if(f&&r.note!==f) return;
+      const d=document.createElement('div');d.style.cssText='border:1px solid #22324b;border-radius:6px;padding:6px;margin:4px 0;font-size:12px';
+      d.innerHTML='<strong>'+r.w+'</strong> '+(r.name?('“'+r.name+'” '):'')+r.city+' <em style="color:#8aa0bd">'+r.note+'</em> <button data-i="'+i+'" style="float:right">✕</button>';
+      d.querySelector('button').onclick=()=>{R().splice(i,1);renderList(el);prev();};list.appendChild(d);});
+    if(!list.children.length) list.innerHTML='<p style="color:#8aa0bd">No reports'+(f?' at '+f:'')+'.</p>';
+  }
+  // verify() defined in Task 16; stub here:
+  let prev=()=>{};
+  function _setPrev(p){prev=p;}
+  SPC.tabs.register('reports',{tools,preview:(el)=>prev(el)});
+  window.SPC._reports={ _setPrev, get R(){return R();}, get OL(){return OL;} };
+})();
+</script>
 </body>
 </html>
