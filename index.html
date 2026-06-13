@@ -17,8 +17,8 @@
   .rail{background:var(--panel);overflow:auto;padding:12px;}
   .rail.left{border-right:1px solid var(--line);}
   .rail.right{border-left:1px solid var(--line);}
-  .map-wrap{display:flex;align-items:center;justify-content:center;background:#0e1830;overflow:hidden;}
-  #map{width:100%;height:100%;max-height:100%;}
+  .map-wrap{display:flex;align-items:flex-start;justify-content:center;background:#0e1830;overflow:auto;padding:10px;}
+  #map{width:100%;height:auto;max-height:100%;aspect-ratio:960/600;}
   #basemap .state{fill:#16233b;stroke:#33425f;stroke-width:.75;vector-effect:non-scaling-stroke;}
   #basemap .state:hover{fill:#1b2c49;}
   h2.sec{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 8px;}
@@ -253,7 +253,8 @@ SPC.tabs = (function(){
     const tools=document.getElementById('toolBody'); tools.innerHTML='';
     const prev=document.getElementById('previewBody'); prev.innerHTML='';
     SPC.map.clearLayers(); SPC.map.cancel();
-    if(renderers[key]){ renderers[key].tools(tools); renderers[key].preview(prev); }
+    if(renderers[key]){ renderers[key].tools(tools); renderers[key].preview(prev);
+      if(renderers[key].render) renderers[key].render(); }
   }
   document.getElementById('tabs').addEventListener('click',e=>{
     if(e.target.dataset.tab) show(e.target.dataset.tab);
@@ -336,14 +337,21 @@ SPC.outlook = (function(){
   }
   function suggestTier(){
     let rank=0;
+    // Derive from drawn hazard probabilities...
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
       const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
       if(ps.length) rank=Math.max(rank,probToRank(h,Math.max(...ps)));
     });
-    // Extreme gate: a CIG4 snownado area present AND an 80% snownado prob area present.
+    // ...and honor any manually-drawn categorical areas as an override (EXTR stays gated below).
+    (S.areas.categorical||[]).filter(a=>a.day==S.day).forEach(a=>{
+      const t=T.tier(a.level); if(t&&t.key!=='EXTR') rank=Math.max(rank,t.rank);
+    });
+    // Extreme gate: a CIG4 snownado area present AND an 80% snownado prob area present,
+    // OR Extreme drawn explicitly on the categorical panel. Never on Day 3.
     const cig4=(S.areas.cig_snownado||[]).some(a=>a.level==='cig4'&&a.day==S.day);
     const p80=(S.areas.snownado||[]).some(a=>+a.level.slice(1)>=60&&a.day==S.day);
-    if(cig4&&p80&&S.day!==3) return 'EXTR';
+    const drawnExtr=(S.areas.categorical||[]).some(a=>a.level==='EXTR'&&a.day==S.day);
+    if((cig4&&p80||drawnExtr)&&S.day!==3) return 'EXTR';
     return T.TIERS[rank].key;
   }
   function narrative(){
@@ -375,7 +383,7 @@ SPC.outlook = (function(){
     el.querySelector('#olCopy').onclick=()=>SPC.state.copyText(narrative());
   }
   _wire(render,previewFn);
-  SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el)});
+  SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el), render:()=>render()});
   return {tools,render:()=>render(),_wire,get curLevel(){return curLevel;}};
 })();
 SPC.tabs.show('outlook');
@@ -427,7 +435,7 @@ SPC.tabs.show('outlook');
     el.querySelector('#mdPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='snow-md.png';a.click();});
     el.querySelector('#mdCopy').onclick=()=>SPC.state.copyText(text());
   }
-  SPC.tabs.register('md',{tools,preview});
+  SPC.tabs.register('md',{tools,preview,render});
 })();
 </script>
 <script>
@@ -477,7 +485,7 @@ SPC.tabs.show('outlook');
     el.querySelector('#wCopy').onclick=()=>SPC.state.copyText(text());
     el.querySelector('#wPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='snow-watch.png';a.click();});
   }
-  SPC.tabs.register('watch',{tools,preview:prev});
+  SPC.tabs.register('watch',{tools,preview:prev,render});
 })();
 </script>
 <script>
@@ -524,7 +532,7 @@ SPC.tabs.show('outlook');
     el.querySelector('#gCopy').onclick=()=>SPC.state.copyText(text());
     el.querySelector('#gPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='snow-warning.png';a.click();});
   }
-  SPC.tabs.register('warning',{tools,preview:prev});
+  SPC.tabs.register('warning',{tools,preview:prev,render});
 })();
 </script>
 <script>
