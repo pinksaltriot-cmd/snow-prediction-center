@@ -8,14 +8,14 @@ Eleven upgrades to the single-file app (`index.html`). Priority: **#8 (Outlook i
 - Outlook risk entry: **add numeric risk dropdowns** per hazard; categorical becomes computed-only.
 - Output scope: **maximal everywhere** — every product becomes a multi-section bulletin.
 
-## 1. Outlook — risk dropdowns + computed categorical (items 7, 8, 11)
-- Add per-hazard controls in the left rail: **peak probability** dropdown + **intensity (CIG)** dropdown for Snownado, Blizzard Wind, Snow Squall. Stored in `S.risk = {snownado:{p,cig}, blizzardWind:{p,cig}, snowSquall:{p,cig}}`.
-- **Categorical panel is computed-only** — no manual drawing of categorical areas. `suggestTier()` reads `S.risk` (not drawn areas), keeping the Extreme gate (CIG4 snownado + ≥60% prob, never Day 3).
-- Map drawing remains for hazard spatial extent only; the drawn `level` is taken from the active dropdown, so there is no shared `curLevel`/panel state to collide. **This removes the #8 lockup** (entering categorical + snownado no longer blocks blizzard/squall entry).
-- Day 4–8 stays probability-only (no categorical), unchanged conceptually.
+## 1. Outlook — draw the three risks; categorical as computed output (items 7, 8, 11)
+- The three hazards (Snownado, Blizzard Wind, Snow Squall) are **drawn like normal**: pick a probability or CIG level, draw a polygon, repeat at other levels to build nested contours (restored original workflow). Stored in `S.areas[h]` / `S.areas['cig_'+h]`.
+- **Categorical is never hand-drawn.** It is a **computed OUTPUT view** ("Categorical (output)" panel) that recolors each drawn risk area to its implied tier and renders it on the map. `suggestTier()` reads the highest drawn prob/CIG per hazard, keeping the Extreme gate (CIG4 snownado + ≥60% prob, never Day 3).
+- Removing the drawable categorical panel eliminates the shared draw-state collision → **#8 lockup fixed** (each hazard exposes its own independent level buttons; entering snownado no longer blocks blizzard/squall).
+- Day 4–8 stays probability-only (Categorical output button hidden).
 
 ## 2. Expected snowfall output (item 1)
-Computed `...EXPECTED SNOWFALL...` section. Tier→range: General 1–3″, Marginal 2–5″, Slight 4–8″, Enhanced 6–12″, Moderate 10–18″, High 15–30″, Extreme 24″+ (locally 36″+). Modifiers: snow squalls add burst-rate note (≥2–4″/hr); blizzard wind adds blowing/drifting note; high-CIG snownado adds localized-scour note.
+Computed `...EXPECTED SNOWFALL...` section. Tier→range: General 1–3″, Marginal 2–5″, Slight 4–8″, Enhanced 6–12″, Moderate 10–18″, High 15–30″, Extreme 24″+ (locally 36″+). **Every tier carries 3–7 base texture modifiers** (ratios, banding, rates, duration, drifting, loading, visibility), plus hazard-driven additions from the drawn squall/blizzard/snownado CIG levels.
 
 ## 3. Hazard overview output (item 9)
 Generated `...HAZARD OVERVIEW / IMPACTS...` paragraph derived from active hazards' probability + CIG + Whiteout scale (`SPC.tax.WHITEOUT`, `CIG`). Describes specific impacts (e.g. W3 "Severe" roof scour, ≥65 mph whiteout/drifting, ≥4″/hr squall visibility loss).

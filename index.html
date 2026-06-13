@@ -253,7 +253,6 @@ SPC.state = (function(){
     outlook:{ day:1, panel:'snownado',
       areas:{ categorical:[], snownado:[], blizzardWind:[], snowSquall:[],
               cig_snownado:[], cig_blizzardWind:[], cig_snowSquall:[] },
-      risk:{ snownado:{p:0,cig:0}, blizzardWind:{p:0,cig:0}, snowSquall:{p:0,cig:0} },
       meta:{ forecaster:'', issued:'' } },
     md:{ areas:[], concerning:'snownado', watchProb:40, mesoGamma:false, text:'', valid:'', number:1, forecaster:'' },
     watch:{ type:'Blizzard', level:'Normal', pds:false, areas:[], probTable:{}, number:1, valid:'' },
@@ -314,100 +313,139 @@ SPC.tabs.show('outlook');
 // ===== SECTION D: OUTLOOK =====
 SPC.outlook = (function(){
   const T=SPC.tax, S=SPC.state.doc.outlook;
-  // Drawing panels are the three hazards only — categorical is computed, never drawn (item 7/8).
+  // The three hazards are drawn (probability + CIG contours). Categorical is a COMPUTED OUTPUT
+  // layer derived from them — never hand-drawn. Removing the drawable categorical panel is the
+  // structural fix for the #8 lockup.
   const PANELS=[['snownado','Snownado'],['blizzardWind','Blizzard Wind'],['snowSquall','Snow Squall']];
-  function hazRisk(h){ return (S.risk&&S.risk[h])||{p:0,cig:0}; }
-
+  let curLevel=null;
+  // Highest drawn probability + CIG for a hazard on the active day.
+  function riskFor(h){
+    const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+String(a.level).slice(1)).filter(n=>!isNaN(n));
+    const cs=(S.areas['cig_'+h]||[]).filter(a=>a.day==S.day).map(a=>+String(a.level).slice(3)).filter(n=>!isNaN(n));
+    return {p:ps.length?Math.max(...ps):0, cig:cs.length?Math.max(...cs):0};
+  }
+  function levelOptions(){
+    const hz=T.HAZARDS[S.panel]; if(!hz) return [];
+    const probs=hz.probs.map(p=>({v:'p'+p,label:p+'%',color:T.PROB_COLORS[p]}));
+    const cigs=hz.cigs.map(c=>({v:'cig'+c,label:'CIG'+c,color:'#ffffff'}));
+    return probs.concat(cigs);
+  }
   function tools(el){
     el.innerHTML='<h2 class="sec">Day</h2><div id="olDays"></div>'+
-      '<h2 class="sec">Hazard Risk <span style="text-transform:none;color:#8aa0bd">(drives categorical)</span></h2><div id="olRisk"></div>'+
-      '<h2 class="sec">Draw Areas On Map</h2><div id="olPanels"></div>'+
-      '<div style="margin-top:6px"><button id="olDraw">✏️ Draw area</button> <button id="olUndo">Undo last</button> '+
-      '<button id="olClear">Clear panel</button></div>'+
-      '<div id="olDrawNote" style="color:#8aa0bd;font-size:12px;margin-top:4px"></div>';
+      '<h2 class="sec">Panel</h2><div id="olPanels"></div>'+
+      '<h2 class="sec">Level</h2><div id="olLevels"></div>'+
+      '<h2 class="sec">Actions</h2>'+
+      '<button id="olDraw">✏️ Draw area</button> <button id="olUndo">Undo last</button> '+
+      '<button id="olClear">Clear panel</button>'+
+      '<div id="olNote" style="color:#8aa0bd;font-size:12px;margin-top:4px"></div>';
     const days=el.querySelector('#olDays');
     [1,2,3,'4-8'].forEach(d=>{const b=document.createElement('button');b.textContent='Day '+d;
-      b.className=S.day==d?'active':''; b.onclick=()=>{S.day=d;tools(el);render();};days.appendChild(b);});
-    // Per-hazard probability + intensity dropdowns. Independent — no shared state to lock up (#8).
-    const risk=el.querySelector('#olRisk');
-    PANELS.forEach(([k,lbl])=>{
-      const hz=T.HAZARDS[k]; const r=hazRisk(k);
-      const row=document.createElement('div'); row.style.cssText='margin:6px 0;padding:6px;border:1px solid #22324b;border-radius:6px';
-      const probOpts=['<option value="0">— none —</option>'].concat(hz.probs.map(p=>'<option value="'+p+'">'+p+'%</option>')).join('');
-      const cigOpts=['<option value="0">— none —</option>'].concat(hz.cigs.map(c=>'<option value="'+c+'">CIG'+c+' · '+T.CIG[k][c]+'</option>')).join('');
-      row.innerHTML='<div style="color:#cfe2f7;font-size:12px;margin-bottom:3px">'+lbl+'</div>'+
-        '<label style="margin:0">Peak probability</label><select data-h="'+k+'" data-f="p" style="width:100%">'+probOpts+'</select>'+
-        '<label style="margin:2px 0 0">Conditional intensity</label><select data-h="'+k+'" data-f="cig" style="width:100%">'+cigOpts+'</select>';
-      const sp=row.querySelector('[data-f="p"]'); sp.value=String(r.p||0);
-      const sc=row.querySelector('[data-f="cig"]'); sc.value=String(r.cig||0);
-      sp.onchange=e=>{S.risk[k].p=+e.target.value;render();};
-      sc.onchange=e=>{S.risk[k].cig=+e.target.value;render();};
-      risk.appendChild(row);
-    });
+      b.className=S.day==d?'active':'';
+      b.onclick=()=>{S.day=d; if(d==='4-8'&&S.panel==='categorical')S.panel='snownado'; tools(el);render();};days.appendChild(b);});
     const panels=el.querySelector('#olPanels');
     PANELS.forEach(([k,lbl])=>{
       const b=document.createElement('button');b.textContent=lbl;b.className=S.panel===k?'active':'';
       b.style.borderLeft='6px solid '+T.HAZARDS[k].color;
-      b.onclick=()=>{S.panel=k;tools(el);render();};panels.appendChild(b);});
-    if(!T.HAZARDS[S.panel]) S.panel='snownado';
-    const r=hazRisk(S.panel);
-    el.querySelector('#olDrawNote').textContent = r.p
-      ? 'Drawing '+T.HAZARDS[S.panel].name+' extent at '+r.p+'% (set above).'
-      : 'Set a peak probability for '+T.HAZARDS[S.panel].name+' above, then draw its extent.';
+      b.onclick=()=>{S.panel=k;curLevel=null;tools(el);render();};panels.appendChild(b);});
+    if(S.day!=='4-8'){ // Categorical is an OUTPUT view (read-only) for Days 1-3.
+      const b=document.createElement('button');b.textContent='Categorical (output)';b.className=S.panel==='categorical'?'active':'';
+      b.style.borderLeft='6px solid '+T.tier('SLGT').color;
+      b.onclick=()=>{S.panel='categorical';curLevel=null;tools(el);render();};panels.appendChild(b);}
+    const lv=el.querySelector('#olLevels');
+    if(S.panel==='categorical'){
+      lv.innerHTML='<p style="color:#8aa0bd;font-size:12px;margin:2px 0">Computed automatically from the three drawn risks — not drawn directly.</p>';
+    } else {
+      levelOptions().forEach(o=>{const b=document.createElement('button');b.textContent=o.label;
+        b.style.borderLeft='6px solid '+o.color; b.className=curLevel===o.v?'active':'';
+        b.onclick=()=>{curLevel=o.v;tools(el);};lv.appendChild(b);});
+    }
+    el.querySelector('#olNote').textContent = S.panel==='categorical'
+      ? 'Switch to a hazard panel to draw. The categorical envelope updates here as an output.'
+      : 'Pick a probability or CIG level, then Draw. Repeat at other levels to build nested contours.';
     el.querySelector('#olDraw').onclick=()=>startDraw();
-    el.querySelector('#olUndo').onclick=()=>{(S.areas[S.panel]||[]).pop();render();};
-    el.querySelector('#olClear').onclick=()=>{S.areas[S.panel]=[];render();};
+    el.querySelector('#olUndo').onclick=()=>{const a=areaList();if(a)a.pop();render();};
+    el.querySelector('#olClear').onclick=()=>{clearPanel();render();};
   }
+  function areaKey(){ return (curLevel&&String(curLevel).startsWith('cig'))?'cig_'+S.panel:S.panel; }
+  function areaList(){ return S.panel==='categorical'?null:S.areas[areaKey()]; }
   function startDraw(){
-    const r=hazRisk(S.panel);
-    if(!r.p){alert('Set a peak probability for '+T.HAZARDS[S.panel].name+' first.');return;}
-    SPC.map.start(null,(pts)=>{ S.areas[S.panel].push({points:pts,level:'p'+r.p,day:S.day}); render(); });
+    if(S.panel==='categorical'){alert('Categorical is a computed output. Draw the three hazard risks instead.');return;}
+    if(!curLevel){alert('Pick a level first');return;}
+    SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
   }
+  function clearPanel(){ if(S.panel==='categorical')return; S.areas[S.panel]=[]; S.areas['cig_'+S.panel]=[]; }
   let preview=()=>{};
   function _wire(r,p){render=r;preview=p;}
   function styleFor(level){
+    if(String(level).startsWith('cig')){ const n=+String(level).slice(3); return {fill:T.CIG_SHADE[n],opacity:1,stroke:'#ffffff',strokeWidth:1.6,dash:'2 2'}; }
     const p=+String(level).slice(1); return {fill:T.PROB_COLORS[p]||'#888',opacity:0.5,stroke:'#0a0a0a'};
-  }
-  function render(){
-    const polys=[];
-    PANELS.forEach(([k])=>{
-      (S.areas[k]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
-    });
-    SPC.map.renderPolys(polys);
-    const pv=document.getElementById('previewBody'); if(pv) preview(pv);
   }
   // Map a hazard's peak probability to a categorical tier rank.
   function probToRank(panel,maxP){
     if(panel==='snownado'){ if(maxP>=30)return 5; if(maxP>=15)return 4; if(maxP>=10)return 3; if(maxP>=5)return 2; if(maxP>=2)return 1; return 0; }
     if(maxP>=60)return 5; if(maxP>=45)return 4; if(maxP>=30)return 3; if(maxP>=15)return 2; if(maxP>=5)return 1; return 0;
   }
-  // Categorical is computed purely from the three risk dropdowns (item 7).
+  function extremeGate(){ const r=riskFor('snownado'); return r.cig>=4 && r.p>=60 && S.day!=='4-8' && S.day!==3; }
+  // Build the categorical OUTPUT polygons: each drawn risk area, recolored to its implied tier (item 7).
+  function categoricalPolys(){
+    const extr=extremeGate(); const polys=[];
+    PANELS.forEach(([h])=>{
+      (S.areas[h]||[]).filter(a=>a.day==S.day).forEach(a=>{
+        const p=+String(a.level).slice(1); if(isNaN(p))return;
+        const t=(extr&&h==='snownado'&&p>=60)?T.tier('EXTR'):T.TIERS[probToRank(h,p)];
+        polys.push({points:a.points,fill:t.color,opacity:t.hatch?0.9:0.55,stroke:'#0a0a0a',dash:t.hatch?'5 4':null});
+      });
+    });
+    return polys;
+  }
+  function render(){
+    let polys;
+    if(S.panel==='categorical'){ polys=categoricalPolys(); }
+    else {
+      polys=[];
+      (S.areas[S.panel]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
+      (S.areas['cig_'+S.panel]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
+    }
+    SPC.map.renderPolys(polys);
+    const pv=document.getElementById('previewBody'); if(pv) preview(pv);
+  }
+  // Categorical tier computed from the drawn hazard risks (item 7).
   function suggestTier(){
     let rank=0;
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
-      const p=hazRisk(h).p; if(p) rank=Math.max(rank,probToRank(h,p));
+      const p=riskFor(h).p; if(p) rank=Math.max(rank,probToRank(h,p));
     });
-    // Extreme gate: CIG4 snownado AND >=60% snownado prob. Never on Day 3.
-    const cig4=hazRisk('snownado').cig>=4;
-    const p60=hazRisk('snownado').p>=60;
-    if(cig4&&p60&&S.day!==3) return 'EXTR';
-    if(S.day===3 && rank>=6) rank=5; // Day 3 cannot reach Extreme via rank either
+    if(extremeGate()) return 'EXTR';
+    if(S.day===3 && rank>=6) rank=5; // Day 3 cannot reach Extreme
     return T.TIERS[rank].key;
   }
   // ----- Expanded outputs (items 1, 9, 11) -----
   const W={1:'W2',2:'W2',3:'W4',4:'W6'};
+  // Base snowfall texture modifiers per categorical tier — every category contributes several (item 1).
+  const SNOW_MODS={
+    SNOW:['light accumulations confined to grassy and elevated surfaces','little to no travel impact','snow-to-liquid ratios near 10:1'],
+    MRGL:['a few slick spots possible on untreated surfaces','locally higher amounts under any persistent banding','ratios around 12:1','brief visibility reductions'],
+    SLGT:['plowable snow likely areawide','banded maxima can run ~50% above the headline range','fluffier 12–15:1 ratios','periods of reduced visibility','minor drifting in open areas'],
+    ENH:['hazardous travel expected','sharp accumulation gradients over short distances','15:1+ ratios padding depths','periods of moderate to heavy rates','slick, snow-covered roads'],
+    MDT:['widespread disruptive snowfall','prolonged heavy rates of 1–2″/hr','high 15–20:1 ratios','near-blizzard visibility in heavier bands','elevation and lake enhancement likely','scattered power issues from heavy wet snow or loading'],
+    HIGH:['crippling, high-end snowfall','intense rates of 2–3″/hr sustained for hours','extreme 20:1+ ratios piling depths rapidly','widespread whiteouts','event duration of 12–24+ hours','roof and tree damage from snow loading','near-impossible travel'],
+    EXTR:['historic, paralyzing storm-total snowfall','violent rates exceeding 3–4″/hr','snow-only extreme depths with multi-foot accumulations','continuous whiteout conditions','prolonged multi-day duration','severe structural snow-loading concerns','complete shutdown of travel and infrastructure']
+  };
   function expectedSnow(tierKey){
     const s=T.SNOWFALL[tierKey]; if(!s) return '';
-    let txt=s.lo+'–'+s.hi+'″'+(s.plus?'+':'');
-    const mods=[];
-    const sq=hazRisk('snowSquall'); if(sq.p){ mods.push('localized burst rates '+(sq.cig>=2?'≥4″/hr':'≥2″/hr')+' within squall bands'); }
-    const bz=hazRisk('blizzardWind'); if(bz.p){ mods.push('significant blowing/drifting'+(bz.cig>=2?' burying drifts well above storm-total amounts':'')); }
-    const sn=hazRisk('snownado'); if(sn.cig>=3){ mods.push('extreme localized scour/deposition near '+(W[sn.cig]||'W4')+'+ snownado tracks'); }
+    const txt=s.lo+'–'+s.hi+'″'+(s.plus?'+':'');
+    const mods=(SNOW_MODS[tierKey]||[]).slice();
+    const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
+    if(sq.p){ mods.push(sq.cig>=2?'localized squall burst rates ≥4″/hr with sudden whiteouts':'squall burst rates ≥2″/hr in narrow bands'); }
+    if(bz.p){ mods.push(bz.cig>=3?'extreme blowing/drifting (≥65 mph) burying drifts far above storm-total amounts':bz.cig>=2?'significant blowing/drifting (≥50 mph) with deep drifts':'blowing and drifting snow reducing visibility'); }
+    if(sn.cig>=4) mods.push('catastrophic localized scour and deposition near W5–W6 snownado tracks');
+    else if(sn.cig>=3) mods.push('severe localized scour and deposition near W4 snownado tracks');
+    else if(sn.cig>=1) mods.push('locally enhanced deposition along snownado paths');
     return txt + (mods.length?' ('+mods.join('; ')+')':'');
   }
   function hazardOverview(){
     const parts=[];
-    const sn=hazRisk('snownado'), bz=hazRisk('blizzardWind'), sq=hazRisk('snowSquall');
+    const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
     if(sn.p){
       let s='Snownadoes are forecast with a peak '+sn.p+'% probability';
       if(sn.cig){ const wt=W[sn.cig]; const w=T.wScale(wt); s+=', and where they occur a conditional intensity of '+T.CIG.snownado[sn.cig]+' — implying '+wt+' "'+(w?w.name:'')+'" strength capable of '+(w?w.dmg.toLowerCase():'major impacts'); }
@@ -451,7 +489,7 @@ SPC.outlook = (function(){
     L.push('  '+(expectedSnow(tierKey)||'Generally light/none.'));
     let any=false;
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
-      const r=hazRisk(h); if(!r.p&&!r.cig) return; any=true;
+      const r=riskFor(h); if(!r.p&&!r.cig) return; any=true;
       L.push('');
       L.push('...'+T.HAZARDS[h].name.toUpperCase()+'...');
       if(r.p) L.push('  Peak probability: '+r.p+'%');
@@ -811,9 +849,11 @@ SPC.tabs.show('outlook');
   window.SPC._reports={ _setPrev, get R(){return R();}, get OL(){return OL;} };
 
   function maxForecast(){
-    // Forecast snownado ceiling for the active day comes from the Outlook risk dropdowns.
-    const r=(OL.risk&&OL.risk.snownado)||{p:0,cig:0};
-    return {prob:r.p||0, cig:r.cig||0};
+    // Forecast snownado ceiling for the active day = highest drawn snownado prob + CIG.
+    const day=OL.day;
+    const ps=(OL.areas.snownado||[]).filter(a=>a.day==day).map(a=>+String(a.level).slice(1)).filter(n=>!isNaN(n));
+    const cs=(OL.areas.cig_snownado||[]).filter(a=>a.day==day).map(a=>+String(a.level).slice(3)).filter(n=>!isNaN(n));
+    return {prob:ps.length?Math.max(...ps):0, cig:cs.length?Math.max(...cs):0};
   }
   function cigForW(wt){ const n=+wt.slice(1); // realized W -> implied CIG ceiling
     if(n>=5)return 4; if(n>=4)return 3; if(n>=3)return 2; if(n>=2)return 1; return 0; }
