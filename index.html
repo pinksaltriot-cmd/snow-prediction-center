@@ -155,9 +155,16 @@ SPC.tax = (function(){
     {t:'W6',lo:121,hi:999,name:'Cryonic',        dmg:'Snow-only extreme: complete burial; catastrophic'}
   ];
   const NOTABILITY = ['Notable','Super-Notable','Super-Hyper-Notable'];
+  // Expected storm-total snowfall by categorical tier (item 1, computed from risk).
+  const SNOWFALL = {
+    SNOW:{lo:1,hi:3},   MRGL:{lo:2,hi:5},   SLGT:{lo:4,hi:8},   ENH:{lo:6,hi:12},
+    MDT:{lo:10,hi:18},  HIGH:{lo:15,hi:30}, EXTR:{lo:24,hi:36,plus:true}
+  };
   function tier(key){return TIERS.find(t=>t.key===key);}
   function wScale(t){return WHITEOUT.find(w=>w.t===t);}
-  return {TIERS,HAZARDS,CIG,PROB_COLORS,CIG_SHADE,WHITEOUT,NOTABILITY,tier,wScale};
+  // Realized/implied Whiteout ceiling for a given snownado CIG level.
+  const CIG_W = {1:'W2',2:'W2',3:'W4',4:'W6'};
+  return {TIERS,HAZARDS,CIG,PROB_COLORS,CIG_SHADE,WHITEOUT,NOTABILITY,SNOWFALL,CIG_W,tier,wScale};
 })();
 </script>
 <script>
@@ -243,14 +250,15 @@ SPC.map = (function(){
 SPC.state = (function(){
   // Central document. Each product family keeps its own areas + meta.
   const doc = {
-    outlook:{ day:1, panel:'categorical',
+    outlook:{ day:1, panel:'snownado',
       areas:{ categorical:[], snownado:[], blizzardWind:[], snowSquall:[],
               cig_snownado:[], cig_blizzardWind:[], cig_snowSquall:[] },
+      risk:{ snownado:{p:0,cig:0}, blizzardWind:{p:0,cig:0}, snowSquall:{p:0,cig:0} },
       meta:{ forecaster:'', issued:'' } },
-    md:{ areas:[], concerning:'snownado', watchProb:40, mesoGamma:false, text:'', valid:'' },
-    watch:{ type:'Blizzard', pds:false, areas:[], probTable:{}, number:1, valid:'' },
-    warning:{ type:'Blizzard', emergency:false, areas:[], valid:'', wfo:'' },
-    hwo:{ days:['','','','','','',''], spotter:false },
+    md:{ areas:[], concerning:'snownado', watchProb:40, mesoGamma:false, text:'', valid:'', number:1, forecaster:'' },
+    watch:{ type:'Blizzard', level:'Normal', pds:false, areas:[], probTable:{}, number:1, valid:'' },
+    warning:{ type:'Blizzard', level:'Normal', emergency:false, areas:[], valid:'', wfo:'' },
+    hwo:{ days:['','','','','','',''], spotter:false, spotterLevel:0 },
     hydro:{ text:'' },
     reports:[]
   };
@@ -306,109 +314,165 @@ SPC.tabs.show('outlook');
 // ===== SECTION D: OUTLOOK =====
 SPC.outlook = (function(){
   const T=SPC.tax, S=SPC.state.doc.outlook;
-  const PANELS=[['categorical','Categorical'],['snownado','Snownado'],['blizzardWind','Blizzard Wind'],['snowSquall','Snow Squall']];
-  function levelOptions(){
-    if(S.panel==='categorical') return T.TIERS.map(t=>({v:t.key,label:t.name,color:t.color}));
-    const hz=T.HAZARDS[S.panel];
-    const probs=hz.probs.map(p=>({v:'p'+p,label:p+'%',color:T.PROB_COLORS[p]}));
-    const cigs=hz.cigs.map(c=>({v:'cig'+c,label:'CIG'+c,color:'#ffffff'}));
-    return probs.concat(cigs);
-  }
-  let curLevel=null;
+  // Drawing panels are the three hazards only — categorical is computed, never drawn (item 7/8).
+  const PANELS=[['snownado','Snownado'],['blizzardWind','Blizzard Wind'],['snowSquall','Snow Squall']];
+  function hazRisk(h){ return (S.risk&&S.risk[h])||{p:0,cig:0}; }
+
   function tools(el){
     el.innerHTML='<h2 class="sec">Day</h2><div id="olDays"></div>'+
-      '<h2 class="sec">Panel</h2><div id="olPanels"></div>'+
-      '<h2 class="sec">Level</h2><div id="olLevels"></div>'+
-      '<h2 class="sec">Actions</h2>'+
-      '<button id="olDraw">✏️ Draw area</button> <button id="olUndo">Undo last</button> '+
-      '<button id="olClear">Clear panel</button>';
+      '<h2 class="sec">Hazard Risk <span style="text-transform:none;color:#8aa0bd">(drives categorical)</span></h2><div id="olRisk"></div>'+
+      '<h2 class="sec">Draw Areas On Map</h2><div id="olPanels"></div>'+
+      '<div style="margin-top:6px"><button id="olDraw">✏️ Draw area</button> <button id="olUndo">Undo last</button> '+
+      '<button id="olClear">Clear panel</button></div>'+
+      '<div id="olDrawNote" style="color:#8aa0bd;font-size:12px;margin-top:4px"></div>';
     const days=el.querySelector('#olDays');
     [1,2,3,'4-8'].forEach(d=>{const b=document.createElement('button');b.textContent='Day '+d;
-      b.className=S.day==d?'active':''; b.onclick=()=>{S.day=d;S.panel='categorical';tools(el);render();};days.appendChild(b);});
+      b.className=S.day==d?'active':''; b.onclick=()=>{S.day=d;tools(el);render();};days.appendChild(b);});
+    // Per-hazard probability + intensity dropdowns. Independent — no shared state to lock up (#8).
+    const risk=el.querySelector('#olRisk');
+    PANELS.forEach(([k,lbl])=>{
+      const hz=T.HAZARDS[k]; const r=hazRisk(k);
+      const row=document.createElement('div'); row.style.cssText='margin:6px 0;padding:6px;border:1px solid #22324b;border-radius:6px';
+      const probOpts=['<option value="0">— none —</option>'].concat(hz.probs.map(p=>'<option value="'+p+'">'+p+'%</option>')).join('');
+      const cigOpts=['<option value="0">— none —</option>'].concat(hz.cigs.map(c=>'<option value="'+c+'">CIG'+c+' · '+T.CIG[k][c]+'</option>')).join('');
+      row.innerHTML='<div style="color:#cfe2f7;font-size:12px;margin-bottom:3px">'+lbl+'</div>'+
+        '<label style="margin:0">Peak probability</label><select data-h="'+k+'" data-f="p" style="width:100%">'+probOpts+'</select>'+
+        '<label style="margin:2px 0 0">Conditional intensity</label><select data-h="'+k+'" data-f="cig" style="width:100%">'+cigOpts+'</select>';
+      const sp=row.querySelector('[data-f="p"]'); sp.value=String(r.p||0);
+      const sc=row.querySelector('[data-f="cig"]'); sc.value=String(r.cig||0);
+      sp.onchange=e=>{S.risk[k].p=+e.target.value;render();};
+      sc.onchange=e=>{S.risk[k].cig=+e.target.value;render();};
+      risk.appendChild(row);
+    });
     const panels=el.querySelector('#olPanels');
-    PANELS.forEach(([k,lbl])=>{ if(S.day==='4-8'&&k==='categorical')return; // 4-8 is prob-only
+    PANELS.forEach(([k,lbl])=>{
       const b=document.createElement('button');b.textContent=lbl;b.className=S.panel===k?'active':'';
-      b.onclick=()=>{S.panel=k;curLevel=null;tools(el);render();};panels.appendChild(b);});
-    const lv=el.querySelector('#olLevels');
-    levelOptions().forEach(o=>{const b=document.createElement('button');b.textContent=o.label;
-      b.style.borderLeft='6px solid '+o.color; b.className=curLevel===o.v?'active':'';
-      if(o.v==='EXTR'&&S.day===3){b.disabled=true;b.title='Day 3 cannot issue Extreme';}
-      b.onclick=()=>{curLevel=o.v;tools(el);};lv.appendChild(b);});
+      b.style.borderLeft='6px solid '+T.HAZARDS[k].color;
+      b.onclick=()=>{S.panel=k;tools(el);render();};panels.appendChild(b);});
+    if(!T.HAZARDS[S.panel]) S.panel='snownado';
+    const r=hazRisk(S.panel);
+    el.querySelector('#olDrawNote').textContent = r.p
+      ? 'Drawing '+T.HAZARDS[S.panel].name+' extent at '+r.p+'% (set above).'
+      : 'Set a peak probability for '+T.HAZARDS[S.panel].name+' above, then draw its extent.';
     el.querySelector('#olDraw').onclick=()=>startDraw();
-    el.querySelector('#olUndo').onclick=()=>{const a=areaList();a.pop();render();};
-    el.querySelector('#olClear').onclick=()=>{clearPanel();render();};
+    el.querySelector('#olUndo').onclick=()=>{(S.areas[S.panel]||[]).pop();render();};
+    el.querySelector('#olClear').onclick=()=>{S.areas[S.panel]=[];render();};
   }
-  function areaKey(){ return S.panel==='categorical'?'categorical':
-    (curLevel&&curLevel.startsWith('cig')?'cig_'+S.panel:S.panel); }
-  function areaList(){ return S.areas[areaKey()]; }
   function startDraw(){
-    if(!curLevel){alert('Pick a level first');return;}
-    SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
+    const r=hazRisk(S.panel);
+    if(!r.p){alert('Set a peak probability for '+T.HAZARDS[S.panel].name+' first.');return;}
+    SPC.map.start(null,(pts)=>{ S.areas[S.panel].push({points:pts,level:'p'+r.p,day:S.day}); render(); });
   }
-  function clearPanel(){ S.areas[areaKey()]=[]; if(S.panel!=='categorical') S.areas['cig_'+S.panel]=[]; }
   let preview=()=>{};
   function _wire(r,p){render=r;preview=p;}
   function styleFor(level){
-    if(S.panel==='categorical'){ const t=T.tier(level); return {fill:t.color,opacity:t.hatch?0.9:0.55,stroke:'#0a0a0a',dash:t.hatch?'5 4':null}; }
-    if(level.startsWith('cig')){ const n=+level.slice(3); return {fill:T.CIG_SHADE[n],opacity:1,stroke:'#ffffff',strokeWidth:1.6,dash:'2 2'}; }
-    const p=+level.slice(1); return {fill:T.PROB_COLORS[p],opacity:0.5,stroke:'#0a0a0a'};
+    const p=+String(level).slice(1); return {fill:T.PROB_COLORS[p]||'#888',opacity:0.5,stroke:'#0a0a0a'};
   }
   function render(){
     const polys=[];
-    const baseKey = S.panel==='categorical'?'categorical':S.panel;
-    (S.areas[baseKey]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
-    if(S.panel!=='categorical'){
-      (S.areas['cig_'+S.panel]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
-    }
+    PANELS.forEach(([k])=>{
+      (S.areas[k]||[]).filter(a=>a.day==S.day).forEach(a=>polys.push(Object.assign({points:a.points},styleFor(a.level))));
+    });
     SPC.map.renderPolys(polys);
     const pv=document.getElementById('previewBody'); if(pv) preview(pv);
   }
-  // Map highest drawn prob (per hazard) to a categorical tier rank.
+  // Map a hazard's peak probability to a categorical tier rank.
   function probToRank(panel,maxP){
     if(panel==='snownado'){ if(maxP>=30)return 5; if(maxP>=15)return 4; if(maxP>=10)return 3; if(maxP>=5)return 2; if(maxP>=2)return 1; return 0; }
     if(maxP>=60)return 5; if(maxP>=45)return 4; if(maxP>=30)return 3; if(maxP>=15)return 2; if(maxP>=5)return 1; return 0;
   }
+  // Categorical is computed purely from the three risk dropdowns (item 7).
   function suggestTier(){
     let rank=0;
-    // Derive from drawn hazard probabilities...
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
-      const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
-      if(ps.length) rank=Math.max(rank,probToRank(h,Math.max(...ps)));
+      const p=hazRisk(h).p; if(p) rank=Math.max(rank,probToRank(h,p));
     });
-    // ...and honor any manually-drawn categorical areas as an override (EXTR stays gated below).
-    (S.areas.categorical||[]).filter(a=>a.day==S.day).forEach(a=>{
-      const t=T.tier(a.level); if(t&&t.key!=='EXTR') rank=Math.max(rank,t.rank);
-    });
-    // Extreme gate: a CIG4 snownado area present AND an 80% snownado prob area present,
-    // OR Extreme drawn explicitly on the categorical panel. Never on Day 3.
-    const cig4=(S.areas.cig_snownado||[]).some(a=>a.level==='cig4'&&a.day==S.day);
-    const p80=(S.areas.snownado||[]).some(a=>+a.level.slice(1)>=60&&a.day==S.day);
-    const drawnExtr=(S.areas.categorical||[]).some(a=>a.level==='EXTR'&&a.day==S.day);
-    if((cig4&&p80||drawnExtr)&&S.day!==3) return 'EXTR';
+    // Extreme gate: CIG4 snownado AND >=60% snownado prob. Never on Day 3.
+    const cig4=hazRisk('snownado').cig>=4;
+    const p60=hazRisk('snownado').p>=60;
+    if(cig4&&p60&&S.day!==3) return 'EXTR';
+    if(S.day===3 && rank>=6) rank=5; // Day 3 cannot reach Extreme via rank either
     return T.TIERS[rank].key;
   }
+  // ----- Expanded outputs (items 1, 9, 11) -----
+  const W={1:'W2',2:'W2',3:'W4',4:'W6'};
+  function expectedSnow(tierKey){
+    const s=T.SNOWFALL[tierKey]; if(!s) return '';
+    let txt=s.lo+'–'+s.hi+'″'+(s.plus?'+':'');
+    const mods=[];
+    const sq=hazRisk('snowSquall'); if(sq.p){ mods.push('localized burst rates '+(sq.cig>=2?'≥4″/hr':'≥2″/hr')+' within squall bands'); }
+    const bz=hazRisk('blizzardWind'); if(bz.p){ mods.push('significant blowing/drifting'+(bz.cig>=2?' burying drifts well above storm-total amounts':'')); }
+    const sn=hazRisk('snownado'); if(sn.cig>=3){ mods.push('extreme localized scour/deposition near '+(W[sn.cig]||'W4')+'+ snownado tracks'); }
+    return txt + (mods.length?' ('+mods.join('; ')+')':'');
+  }
+  function hazardOverview(){
+    const parts=[];
+    const sn=hazRisk('snownado'), bz=hazRisk('blizzardWind'), sq=hazRisk('snowSquall');
+    if(sn.p){
+      let s='Snownadoes are forecast with a peak '+sn.p+'% probability';
+      if(sn.cig){ const wt=W[sn.cig]; const w=T.wScale(wt); s+=', and where they occur a conditional intensity of '+T.CIG.snownado[sn.cig]+' — implying '+wt+' "'+(w?w.name:'')+'" strength capable of '+(w?w.dmg.toLowerCase():'major impacts'); }
+      parts.push(s+'.');
+    }
+    if(bz.p){
+      let s='Blizzard wind is forecast at a peak '+bz.p+'% probability';
+      if(bz.cig){ s+=' with '+T.CIG.blizzardWind[bz.cig]+', producing near-zero visibility whiteouts and rapid, deep drifting that will make travel dangerous to impossible'; }
+      parts.push(s+'.');
+    }
+    if(sq.p){
+      let s='Snow squalls carry a peak '+sq.p+'% probability';
+      if(sq.cig){ s+=' with '+T.CIG.snowSquall[sq.cig]+', creating sudden whiteouts and flash-freeze surfaces that trigger chain-reaction crashes on roadways'; }
+      parts.push(s+'.');
+    }
+    if(!parts.length) return 'No organized convective-snow hazards are currently forecast for this period.';
+    return parts.join(' ');
+  }
+  function preparedness(tierKey){
+    const r=T.tier(tierKey).rank;
+    if(r>=6) return 'Life-threatening, potentially historic event. Complete preparations now; do not travel. Heed all warnings and evacuation guidance.';
+    if(r>=5) return 'Dangerous, high-impact event likely. Finish preparations early and avoid all non-essential travel.';
+    if(r>=4) return 'Significant impacts expected over a broad area. Prepare for hazardous travel and possible power loss.';
+    if(r>=3) return 'Enhanced impacts possible. Stay weather-aware and be ready to alter travel plans.';
+    if(r>=2) return 'Localized impacts possible. Monitor later statements for changes.';
+    if(r>=1) return 'Marginal threat. Conditions warrant routine monitoring.';
+    return 'No significant convective-snow impacts anticipated.';
+  }
   function narrative(){
-    const tier=T.tier(suggestTier());
-    const lines=[];
-    lines.push('SNOW PREDICTION CENTER DAY '+S.day+' CONVECTIVE-SNOW OUTLOOK');
-    lines.push('VALID '+(S.meta.issued||'(set valid time)'));
-    lines.push('');
-    lines.push('...CATEGORICAL OUTLOOK: '+tier.name.toUpperCase()+' RISK...');
-    if(tier.key==='EXTR') lines.push('** EXTREME RISK — CATASTROPHIC SNOWNADO OUTBREAK POSSIBLE (≥80% CIG4) **');
+    const tierKey=suggestTier(), tier=T.tier(tierKey);
+    const day38 = S.day==='4-8';
+    const L=[];
+    L.push('SNOW PREDICTION CENTER DAY '+S.day+' CONVECTIVE-SNOW OUTLOOK');
+    L.push('VALID '+(S.meta.issued||'(set valid time)'));
+    L.push('');
+    if(day38){ L.push('...PROBABILISTIC OUTLOOK (DAY 4-8)...'); }
+    else { L.push('...CATEGORICAL OUTLOOK: '+tier.name.toUpperCase()+' RISK...'); }
+    if(tierKey==='EXTR') L.push('** EXTREME RISK — CATASTROPHIC SNOWNADO OUTBREAK POSSIBLE (CIG4 + ≥60%) **');
+    L.push('');
+    L.push('...EXPECTED SNOWFALL...');
+    L.push('  '+(expectedSnow(tierKey)||'Generally light/none.'));
+    let any=false;
     ['snownado','blizzardWind','snowSquall'].forEach(h=>{
-      const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
-      const cigs=(S.areas['cig_'+h]||[]).filter(a=>a.day==S.day).map(a=>a.level.toUpperCase());
-      if(ps.length||cigs.length){
-        lines.push('');
-        lines.push('...'+T.HAZARDS[h].name.toUpperCase()+'...');
-        if(ps.length) lines.push('  Max probability: '+Math.max(...ps)+'%');
-        if(cigs.length) lines.push('  Conditional intensity: '+[...new Set(cigs)].join(', '));
-      }
+      const r=hazRisk(h); if(!r.p&&!r.cig) return; any=true;
+      L.push('');
+      L.push('...'+T.HAZARDS[h].name.toUpperCase()+'...');
+      if(r.p) L.push('  Peak probability: '+r.p+'%');
+      if(r.cig) L.push('  Conditional intensity: CIG'+r.cig+' — '+T.CIG[h][r.cig]);
     });
-    return lines.join('\n');
+    if(!any){ L.push(''); L.push('...HAZARDS...'); L.push('  No organized convective-snow hazards set.'); }
+    L.push('');
+    L.push('...HAZARD OVERVIEW / IMPACTS...');
+    L.push('  '+hazardOverview());
+    L.push('');
+    L.push('...PREPAREDNESS...');
+    L.push('  '+preparedness(tierKey));
+    L.push('');
+    L.push('Forecaster: '+(S.meta.forecaster||'SPC'));
+    return L.join('\n');
   }
   function previewFn(el){
-    el.innerHTML='<div style="margin-bottom:8px"><strong>Suggested:</strong> '+T.tier(suggestTier()).name+' Risk</div>'+
+    const tierKey=suggestTier(), tier=T.tier(tierKey);
+    el.innerHTML='<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">'+
+        '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+tier.color+';border:1px solid #0a0a0a"></span>'+
+        '<strong>Categorical:</strong> '+(S.day==='4-8'?'Probabilistic (Day 4-8)':tier.name+' Risk')+'</div>'+
       '<div class="preview-text" id="olText"></div>'+
       '<div style="margin-top:8px"><button id="olPng">⬇ PNG</button> <button id="olCopy">⧉ Copy text</button></div>';
     el.querySelector('#olText').textContent=narrative();
@@ -417,7 +481,7 @@ SPC.outlook = (function(){
   }
   _wire(render,previewFn);
   SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el), render:()=>render()});
-  return {tools,render:()=>render(),_wire,get curLevel(){return curLevel;}};
+  return {tools,render:()=>render(),_wire,suggestTier};
 })();
 SPC.tabs.show('outlook');
 </script>
@@ -425,11 +489,23 @@ SPC.tabs.show('outlook');
 // ===== SECTION E: MESOSCALE DISCUSSION =====
 (function(){
   const T=SPC.tax, S=SPC.state.doc.md;
+  // Granular probability-of-watch wording (item 3): 6 buckets.
+  function watchWording(p){
+    if(p>=95) return {phrase:'Watch issuance is imminent and may already be in progress', conf:'imminent'};
+    if(p>=75) return {phrase:'A watch is expected; issuance is anticipated shortly', conf:'expected'};
+    if(p>=55) return {phrase:'A watch is likely and becoming increasingly probable', conf:'likely'};
+    if(p>=35) return {phrase:'A watch may be needed in the next 1 to 3 hours', conf:'possible'};
+    if(p>=15) return {phrase:'A watch may eventually be needed should trends continue', conf:'low'};
+    return {phrase:'A watch is not anticipated at this time', conf:'none'};
+  }
   function tools(el){
     el.innerHTML='<h2 class="sec">Concerning</h2><div id="mdConc"></div>'+
       '<h2 class="sec">Probability of Watch Issuance</h2>'+
       '<input id="mdProb" type="range" min="0" max="100" step="5" value="'+S.watchProb+'"> <span id="mdProbV">'+S.watchProb+'%</span>'+
+      '<div id="mdProbW" style="color:#8aa0bd;font-size:12px"></div>'+
+      '<h2 class="sec">MD number</h2><input id="mdNum" type="number" value="'+(S.number||1)+'" style="width:80px">'+
       '<h2 class="sec">Valid</h2><input id="mdValid" type="datetime-local">'+
+      '<h2 class="sec">Forecaster</h2><input id="mdFc" placeholder="e.g. SPC" value="'+(S.forecaster||'').replace(/"/g,'&quot;')+'" style="width:100%">'+
       '<h2 class="sec">Meso-gamma</h2>'+
       '<label><input type="checkbox" id="mdMG" '+(S.mesoGamma?'checked':'')+'> High-confidence meso-gamma</label>'+
       '<div id="mdMGnote" style="color:#8aa0bd;font-size:12px"></div>'+
@@ -437,38 +513,63 @@ SPC.tabs.show('outlook');
     const conc=el.querySelector('#mdConc');
     [['snownado','Snownado'],['blizzardWind','Blizzard Wind'],['snowSquall','Snow Squalls']].forEach(([k,l])=>{
       const b=document.createElement('button');b.textContent=l;b.className=S.concerning===k?'active':'';
-      b.onclick=()=>{S.concerning=k;tools(el);};conc.appendChild(b);});
-    el.querySelector('#mdProb').oninput=e=>{S.watchProb=+e.target.value;el.querySelector('#mdProbV').textContent=S.watchProb+'%';preview(document.getElementById('previewBody'));};
-    el.querySelector('#mdValid').onchange=e=>{S.valid=e.target.value;preview(document.getElementById('previewBody'));};
-    el.querySelector('#mdMG').onchange=e=>{S.mesoGamma=e.target.checked;tools(el);preview(document.getElementById('previewBody'));};
+      b.onclick=()=>{S.concerning=k;tools(el);prev();};conc.appendChild(b);});
+    el.querySelector('#mdProbW').textContent=watchWording(S.watchProb).phrase+'.';
+    el.querySelector('#mdProb').oninput=e=>{S.watchProb=+e.target.value;el.querySelector('#mdProbV').textContent=S.watchProb+'%';el.querySelector('#mdProbW').textContent=watchWording(S.watchProb).phrase+'.';prev();};
+    el.querySelector('#mdNum').onchange=e=>{S.number=+e.target.value;prev();};
+    el.querySelector('#mdValid').onchange=e=>{S.valid=e.target.value;prev();};
+    el.querySelector('#mdFc').oninput=e=>{S.forecaster=e.target.value;prev();};
+    el.querySelector('#mdMG').onchange=e=>{S.mesoGamma=e.target.checked;tools(el);render();};
     el.querySelector('#mdMGnote').textContent = S.mesoGamma
-      ? 'Meso-gamma criteria: confident W2+ snownadoes OR blizzard wind ≥60 mph.' : '';
+      ? 'Meso-gamma template: pinpoint, short-fused; confident W2+ snownadoes OR blizzard wind ≥60 mph.' : '';
     el.querySelector('#mdDraw').onclick=()=>SPC.map.start(null,pts=>{S.areas=[{points:pts}];render();});
     el.querySelector('#mdClr').onclick=()=>{S.areas=[];render();};
   }
   function render(){
     SPC.map.renderPolys((S.areas||[]).map(a=>({points:a.points,fill:'none',stroke:S.mesoGamma?'#ff3b3b':'#ffd24d',strokeWidth:2.4,dash:'6 3',opacity:0})));
-    const pv=document.getElementById('previewBody'); if(pv) preview(pv);
+    const pv=document.getElementById('previewBody'); if(pv) prev(pv);
   }
-  function text(){
+  function hdrLines(title){
     const L=[];
-    L.push((S.mesoGamma?'SNOW MESOSCALE DISCUSSION (MESO-GAMMA) ':'SNOW MESOSCALE DISCUSSION ')+(SPC.state.doc.md.number||''));
+    L.push(title+' '+(S.number||1));
     L.push('Concerning...'+T.HAZARDS[S.concerning].name);
     L.push('Valid '+(S.valid||'(set valid time)'));
     L.push('Probability of Watch Issuance...'+S.watchProb+' percent');
-    L.push('');
-    if(S.mesoGamma) L.push('** MESO-GAMMA: high-confidence W2+ snownadoes or blizzard wind ≥60 mph. **');
-    L.push('SUMMARY...Conditions are becoming favorable for '+T.HAZARDS[S.concerning].name.toLowerCase()+
-      '. A '+(S.watchProb>=50?'watch is likely':'watch may be needed')+' in the next 1-3 hours.');
+    return L;
+  }
+  // Regular MD template (meso-beta scale).
+  function textRegular(){
+    const w=watchWording(S.watchProb); const hz=T.HAZARDS[S.concerning].name;
+    const L=hdrLines('SNOW MESOSCALE DISCUSSION');
+    L.push(''); L.push('SUMMARY...Conditions are becoming favorable for '+hz.toLowerCase()+
+      ' across the highlighted area. '+w.phrase+'.');
+    L.push(''); L.push('DISCUSSION...Mesoscale forcing and environmental trends increasingly support organized '+hz.toLowerCase()+
+      '. Confidence in coverage and intensity is '+(w.conf==='imminent'||w.conf==='expected'?'high':w.conf==='likely'?'moderate to high':w.conf==='possible'?'moderate':'low to moderate')+
+      '. Short-term radar and observational trends will be monitored to determine watch timing.');
+    L.push(''); L.push('Forecaster: '+(S.forecaster||'SPC'));
     return L.join('\n');
   }
-  function preview(el){
+  // Distinct meso-gamma template (item 4) — pinpoint, short-fused, immediate-action.
+  function textGamma(){
+    const w=watchWording(S.watchProb); const hz=T.HAZARDS[S.concerning].name;
+    const L=hdrLines('SNOW MESOSCALE DISCUSSION (MESO-GAMMA)');
+    L.push(''); L.push('** MESO-GAMMA — PINPOINT, SHORT-FUSED THREAT **');
+    L.push(''); L.push('SUMMARY...A very localized, rapidly evolving threat for '+hz.toLowerCase()+
+      ' is developing on the meso-gamma scale (single cells / narrow bands). High-confidence W2+ snownadoes or blizzard wind ≥60 mph are possible with little lead time. '+w.phrase+'.');
+    L.push(''); L.push('IMMEDIATE CONCERN...Impacts may arrive within minutes over a small area. Persons in or near the highlighted zone should be prepared to take protective action immediately; do not wait for a watch.');
+    L.push(''); L.push('DISCUSSION...Pinpoint forcing and intense local circulations favor brief but violent '+hz.toLowerCase()+
+      '. Spatial coverage is small but intensity potential is high. Trends will be reassessed on a minute-to-minute basis.');
+    L.push(''); L.push('Forecaster: '+(S.forecaster||'SPC'));
+    return L.join('\n');
+  }
+  function text(){ return S.mesoGamma?textGamma():textRegular(); }
+  function prev(el){ el=el||document.getElementById('previewBody'); if(!el)return;
     el.innerHTML='<div class="preview-text" id="mdText"></div><div style="margin-top:8px"><button id="mdPng">⬇ PNG</button> <button id="mdCopy">⧉ Copy</button></div>';
     el.querySelector('#mdText').textContent=text();
     el.querySelector('#mdPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='snow-md.png';a.click();});
     el.querySelector('#mdCopy').onclick=()=>SPC.state.copyText(text());
   }
-  SPC.tabs.register('md',{tools,preview,render});
+  SPC.tabs.register('md',{tools,preview:prev,render});
 })();
 </script>
 <script>
@@ -478,9 +579,23 @@ SPC.tabs.show('outlook');
   const TYPES=['Blizzard','Snownado'];
   const ROWS=[['Two or more snownadoes','snownado'],['One or more W2+ snownado','w2'],
               ['Blizzard wind gusts ≥60 mph','wind60'],['Snow squalls ≥4″/hr','squall4']];
+  // Severity ladder (item 6): Normal -> DS (Dangerous Situation) -> PDS.
+  const LEVELS=['Normal','DS','PDS'];
+  const LVL={
+    Normal:{label:'Normal',  banner:null,
+            expect:'Conditions are favorable for the hazards in the probability table within the watch area.',
+            action:'Stay weather-aware and review your safety plans.'},
+    DS:    {label:'DS — Dangerous Situation', banner:'** DANGEROUS SITUATION **',
+            expect:'A dangerous situation is unfolding. Hazard coverage and intensity are expected to run above a typical watch.',
+            action:'Prepare now. Avoid non-essential travel and be ready to act quickly.'},
+    PDS:   {label:'PDS — Particularly Dangerous Situation', banner:'** PARTICULARLY DANGEROUS SITUATION **',
+            expect:'A particularly dangerous situation is expected, with a significant threat of intense, widespread, and potentially life-threatening conditions.',
+            action:'Complete preparations immediately. Avoid all travel and be prepared to shelter.'}
+  };
+  function lvl(){ return S.level||(S.pds?'PDS':'Normal'); }
   function tools(el){
     el.innerHTML='<h2 class="sec">Watch type</h2><div id="wType"></div>'+
-      '<label style="display:block;margin-top:8px"><input type="checkbox" id="wPds" '+(S.pds?'checked':'')+'> PDS (Particularly Dangerous Situation)</label>'+
+      '<h2 class="sec">Severity</h2><div id="wLvl"></div>'+
       '<h2 class="sec">Watch number</h2><input id="wNum" type="number" value="'+(S.number||1)+'" style="width:80px">'+
       '<h2 class="sec">Valid</h2><input id="wValid" type="datetime-local">'+
       '<h2 class="sec">Probability table</h2><div id="wProbs"></div>'+
@@ -488,12 +603,14 @@ SPC.tabs.show('outlook');
     const ty=el.querySelector('#wType');
     TYPES.forEach(t=>{const b=document.createElement('button');b.textContent=t+' Watch';b.className=S.type===t?'active':'';
       b.onclick=()=>{S.type=t;tools(el);prev();};ty.appendChild(b);});
+    const lv=el.querySelector('#wLvl');
+    LEVELS.forEach(k=>{const b=document.createElement('button');b.textContent=LVL[k].label;b.className=lvl()===k?'active':'';
+      b.onclick=()=>{S.level=k;S.pds=(k==='PDS');tools(el);prev();};lv.appendChild(b);});
     const pr=el.querySelector('#wProbs');
     ROWS.forEach(([lbl,key])=>{const d=document.createElement('div');d.style.margin='4px 0';
       d.innerHTML=lbl+': <select data-k="'+key+'"><option>Low</option><option>Moderate</option><option>High</option><option>Extreme</option></select>';
       const sel=d.querySelector('select');sel.value=S.probTable[key]||'Low';
       sel.onchange=e=>{S.probTable[key]=e.target.value;prev();};pr.appendChild(d);});
-    el.querySelector('#wPds').onchange=e=>{S.pds=e.target.checked;prev();};
     el.querySelector('#wNum').onchange=e=>{S.number=+e.target.value;prev();};
     el.querySelector('#wValid').onchange=e=>{S.valid=e.target.value;prev();};
     el.querySelector('#wDraw').onclick=()=>SPC.map.start(null,pts=>{S.areas=[{points:pts}];render();});
@@ -505,11 +622,14 @@ SPC.tabs.show('outlook');
     const pv=document.getElementById('previewBody'); if(pv) prev(pv);
   }
   function text(){
-    const L=[]; const hdr=(S.pds?'PDS ':'')+'SNOW '+S.type.toUpperCase()+' WATCH '+(S.number||1);
-    L.push(hdr); L.push('Valid '+(S.valid||'(set valid time)')); L.push('');
-    if(S.pds) L.push('** PARTICULARLY DANGEROUS SITUATION **');
+    const v=LVL[lvl()]; const pfx=lvl()==='Normal'?'':(lvl()+' ');
+    const L=[]; L.push(pfx+'SNOW '+S.type.toUpperCase()+' WATCH '+(S.number||1));
+    L.push('Valid '+(S.valid||'(set valid time)')); L.push('');
+    if(v.banner) L.push(v.banner);
     L.push('PROBABILITY TABLE');
     ROWS.forEach(([lbl,key])=>L.push('  '+lbl+'...'+(S.probTable[key]||'Low')));
+    L.push(''); L.push('WHAT TO EXPECT...'+v.expect);
+    L.push(''); L.push('PREPAREDNESS ACTIONS...'+v.action);
     return L.join('\n');
   }
   function prev(el){ el=el||document.getElementById('previewBody'); if(!el)return;
@@ -530,17 +650,35 @@ SPC.tabs.show('outlook');
               'Snow Squall':'Intense, brief, moderate–heavy snow; vis ≤¼ mi.',
               'Snownado':'A snownado is occurring or imminent. Take cover from blowing snow.'};
   function canEmergency(){ return S.type==='Blizzard'||S.type==='Snownado'; } // squalls are warning-only, no emergency
+  // Severity ladder (items 5+6): Normal -> DS -> PDS -> Emergency (Emergency gated to Blizzard/Snownado).
+  function levels(){ return canEmergency()?['Normal','DS','PDS','Emergency']:['Normal','DS','PDS']; }
+  const LVL={
+    Normal:{label:'Normal', banner:null,
+            impact:'Hazardous conditions are occurring or imminent within the warned polygon.',
+            action:'Avoid travel if possible. If you must travel, keep an emergency kit in your vehicle.'},
+    DS:{label:'DS — Dangerous Situation', banner:'** DANGEROUS SITUATION **',
+        impact:'A dangerous situation is occurring. Conditions are more intense than a typical warning and are worsening.',
+        action:'Avoid all travel. Remain indoors and away from windows; conditions can deteriorate rapidly.'},
+    PDS:{label:'PDS — Particularly Dangerous Situation', banner:'** PARTICULARLY DANGEROUS SITUATION **',
+         impact:'A particularly dangerous situation is occurring, with intense, potentially life-threatening conditions over populated areas.',
+         action:'Do not travel under any circumstances. Shelter now in a sturdy interior space and stay there.'},
+    Emergency:{label:'EMERGENCY', banner:null, // banner built per-type below
+         impact:'A catastrophic, confirmed threat to human life and property is occurring.',
+         action:'Seek the safest available shelter immediately. This is a life-threatening emergency.'}
+  };
+  function lvl(){ let k=S.level||(S.emergency?'Emergency':'Normal'); if(k==='Emergency'&&!canEmergency())k='PDS'; return k; }
   function tools(el){
     el.innerHTML='<h2 class="sec">Warning type</h2><div id="gType"></div>'+
-      '<label style="display:block;margin-top:8px" id="gEmgWrap"><input type="checkbox" id="gEmg" '+(S.emergency?'checked':'')+'> Emergency wording</label>'+
+      '<h2 class="sec">Severity</h2><div id="gLvl"></div>'+
       '<h2 class="sec">WFO</h2><input id="gWfo" placeholder="e.g. Buffalo NY" value="'+(S.wfo||'')+'">'+
       '<h2 class="sec">Valid</h2><input id="gValid" type="datetime-local">'+
       '<h2 class="sec">Actions</h2><button id="gDraw">✏️ Draw polygon</button> <button id="gClr">Clear</button>';
     const ty=el.querySelector('#gType');
     TYPES.forEach(t=>{const b=document.createElement('button');b.textContent=t+' Warning';b.className=S.type===t?'active':'';
-      b.onclick=()=>{S.type=t;if(!canEmergency())S.emergency=false;tools(el);prev();};ty.appendChild(b);});
-    if(!canEmergency()){el.querySelector('#gEmgWrap').style.display='none';}
-    el.querySelector('#gEmg').onchange=e=>{S.emergency=e.target.checked;prev();};
+      b.onclick=()=>{S.type=t;if(lvl()==='Emergency'&&!canEmergency()){S.level='PDS';S.emergency=false;}tools(el);prev();};ty.appendChild(b);});
+    const lv=el.querySelector('#gLvl');
+    levels().forEach(k=>{const b=document.createElement('button');b.textContent=LVL[k].label;b.className=lvl()===k?'active':'';
+      b.onclick=()=>{S.level=k;S.emergency=(k==='Emergency');tools(el);prev();};lv.appendChild(b);});
     el.querySelector('#gWfo').onchange=e=>{S.wfo=e.target.value;prev();};
     el.querySelector('#gValid').onchange=e=>{S.valid=e.target.value;prev();};
     el.querySelector('#gDraw').onclick=()=>SPC.map.start(null,pts=>{S.areas=[{points:pts}];render();});
@@ -552,11 +690,18 @@ SPC.tabs.show('outlook');
     const pv=document.getElementById('previewBody'); if(pv) prev(pv);
   }
   function text(){
-    const L=[]; const emg=S.emergency&&canEmergency();
-    L.push((emg?(S.type.toUpperCase()+' EMERGENCY'):('SNOW '+S.type.toUpperCase()+' WARNING'))+(S.wfo?(' — NWS '+S.wfo):''));
+    const k=lvl(); const v=LVL[k]; const L=[];
+    const tname=S.type.toUpperCase();
+    const base=tname.indexOf('SNOW')===0?tname:('SNOW '+tname); // avoid "SNOW SNOW SQUALL"
+    const head = k==='Emergency' ? (tname+' EMERGENCY')
+               : ((k==='Normal'?'':k+' ')+base+' WARNING');
+    L.push(head+(S.wfo?(' — NWS '+S.wfo):''));
     L.push('Valid '+(S.valid||'(set valid time)')); L.push('');
-    if(emg) L.push('** '+S.type.toUpperCase()+' EMERGENCY — CATASTROPHIC, CONFIRMED THREAT TO POPULATED AREAS **');
-    L.push(CRIT[S.type]);
+    if(k==='Emergency') L.push('** '+S.type.toUpperCase()+' EMERGENCY — CATASTROPHIC, CONFIRMED THREAT TO POPULATED AREAS **');
+    else if(v.banner) L.push(v.banner);
+    L.push('CRITERIA...'+CRIT[S.type]);
+    L.push(''); L.push('HAZARD...'+v.impact);
+    L.push(''); L.push('PRECAUTIONARY/PREPAREDNESS ACTIONS...'+v.action);
     return L.join('\n');
   }
   function prev(el){ el=el||document.getElementById('previewBody'); if(!el)return;
@@ -573,24 +718,47 @@ SPC.tabs.show('outlook');
 (function(){
   const H=SPC.state.doc.hwo, HY=SPC.state.doc.hydro;
   const DAYNAMES=['Day 1 (Today)','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7'];
+  // Granular spotter activation scale (item 2): 6 levels with distinct statements.
+  const SPOT=[
+    {label:'0 — Not Activated',                stmt:'Snow spotter activation is not expected today. No reports are needed at this time.'},
+    {label:'1 — Standby / Situational Awareness', stmt:'Snow spotters should maintain situational awareness and be prepared for possible activation later today. No reports are requested yet.'},
+    {label:'2 — Activated · Routine Reports',  stmt:'Snow spotters are activated. Please relay routine reports of snownadoes, blizzard wind, and squall whiteouts as conditions allow.'},
+    {label:'3 — Activated · Enhanced Reporting', stmt:'Snow spotters are activated with enhanced reporting. Report all snownadoes, blizzard wind gusts, and visibility drops promptly, including measured snowfall and drift depths.'},
+    {label:'4 — Full Activation · Priority Reports', stmt:'FULL spotter activation. Priority reports are requested for any snownado, ≥60 mph blizzard wind, or whiteout. Report immediately and continue monitoring.'},
+    {label:'5 — Emergency · Continuous Reporting', stmt:'EMERGENCY spotter activation. Continuous, real-time reporting is requested for all life-threatening conditions. Spotters should prioritize personal safety above reporting at all times.'}
+  ];
+  function suggestSpot(){
+    try{ const r=SPC.tax.tier(SPC.outlook.suggestTier()).rank; return [0,1,2,3,4,4,5][r]||0; }catch(e){ return 0; }
+  }
+  function curSpot(){ if(typeof H.spotterLevel==='number') return H.spotterLevel; return H.spotter?2:0; }
   function tools(el){
     el.innerHTML='<h2 class="sec">Hazardous Weather Outlook</h2><div id="hwoDays"></div>'+
-      '<label style="display:block;margin-top:8px"><input type="checkbox" id="hwoSpot" '+(H.spotter?'checked':'')+'> Activate snow spotters</label>'+
+      '<h2 class="sec">Snow Spotter Activation</h2>'+
+      '<select id="hwoSpot" style="width:100%"></select>'+
+      '<div id="hwoSpotSug" style="color:#8aa0bd;font-size:12px;margin-top:4px"></div>'+
       '<h2 class="sec">Hydrologic Outlook (ESF)</h2><textarea id="hyText" rows="5" style="width:100%" placeholder="Snowmelt / snowpack flooding outlook…">'+(HY.text||'')+'</textarea>';
     const dd=el.querySelector('#hwoDays');
     DAYNAMES.forEach((dn,i)=>{const w=document.createElement('div');w.style.margin='4px 0';
       w.innerHTML='<label style="font-size:12px;color:#8aa0bd">'+dn+'</label><input data-d="'+i+'" style="width:100%" value="'+(H.days[i]||'').replace(/"/g,'&quot;')+'">';
       w.querySelector('input').oninput=e=>{H.days[+e.target.dataset.d]=e.target.value;prev();};dd.appendChild(w);});
-    el.querySelector('#hwoSpot').onchange=e=>{H.spotter=e.target.checked;prev();};
+    const ss=el.querySelector('#hwoSpot');
+    ss.innerHTML=SPOT.map((s,i)=>'<option value="'+i+'">'+s.label+'</option>').join('');
+    ss.value=String(curSpot());
+    ss.onchange=e=>{H.spotterLevel=+e.target.value;H.spotter=(H.spotterLevel>=2);prev();};
+    el.querySelector('#hwoSpotSug').textContent='Suggested from current Outlook: level '+suggestSpot()+'.';
     el.querySelector('#hyText').oninput=e=>{HY.text=e.target.value;prev();};
   }
   function text(){
     const L=['HAZARDOUS WEATHER OUTLOOK',''];
     L.push('.DAY ONE...'+(H.days[0]||'No hazardous winter weather expected.'));
     L.push('');L.push('.DAYS TWO THROUGH SEVEN...');
-    for(let i=1;i<7;i++) if(H.days[i]) L.push('  '+DAYNAMES[i]+': '+H.days[i]);
+    let anyExt=false;
+    for(let i=1;i<7;i++) if(H.days[i]){ L.push('  '+DAYNAMES[i]+': '+H.days[i]); anyExt=true; }
+    if(!anyExt) L.push('  No hazardous winter weather expected.');
     L.push('');L.push('.SPOTTER INFORMATION STATEMENT...');
-    L.push(H.spotter?'Snow spotters will be needed today. Report snownadoes, blizzard wind, and squall whiteouts.':'Snow spotter activation is not expected today.');
+    const lvl=curSpot();
+    L.push('Activation level '+lvl+' ('+SPOT[lvl].label.replace(/^\d+\s—\s/,'')+').');
+    L.push(SPOT[lvl].stmt);
     L.push('');L.push('=== HYDROLOGIC OUTLOOK (ESF) ===');
     L.push(HY.text||'No hydrologic concerns (snowmelt/snowpack) at this time.');
     return L.join('\n');
@@ -643,31 +811,32 @@ SPC.tabs.show('outlook');
   window.SPC._reports={ _setPrev, get R(){return R();}, get OL(){return OL;} };
 
   function maxForecast(){
-    // Highest snownado prob + highest snownado CIG present on the active outlook day.
-    const day=OL.day;
-    const ps=(OL.areas.snownado||[]).filter(a=>a.day==day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
-    const cs=(OL.areas.cig_snownado||[]).filter(a=>a.day==day).map(a=>+a.level.slice(3)).filter(n=>!isNaN(n));
-    return {prob:ps.length?Math.max(...ps):0, cig:cs.length?Math.max(...cs):0};
+    // Forecast snownado ceiling for the active day comes from the Outlook risk dropdowns.
+    const r=(OL.risk&&OL.risk.snownado)||{p:0,cig:0};
+    return {prob:r.p||0, cig:r.cig||0};
   }
   function cigForW(wt){ const n=+wt.slice(1); // realized W -> implied CIG ceiling
     if(n>=5)return 4; if(n>=4)return 3; if(n>=3)return 2; if(n>=2)return 1; return 0; }
-  function verdict(r,f){
-    const need=cigForW(r.w);
-    if(need>f.cig) return ['under-warned','#e23a3a'];
-    if(need===f.cig) return ['verified','#2ea66a'];
-    return ['over-warned','#ffd24d'];
-  }
+  // 7-point over/under scale (item 10), keyed by gap = need - forecast CIG.
+  const SCALE={ '3':['CRITICALLY UNDER-WARNED','#b30000'], '2':['SIGNIFICANTLY UNDER-WARNED','#e23a3a'],
+                '1':['UNDER-WARNED','#ff7043'], '0':['VERIFIED','#2ea66a'],
+                '-1':['SLIGHTLY OVER-WARNED','#ffd24d'], '-2':['OVER-WARNED','#e0b000'], '-3':['SIGNIFICANTLY OVER-WARNED','#cf9000'] };
+  function clampGap(g){ return Math.max(-3,Math.min(3,g)); }
+  function verdict(r,f){ const g=clampGap(cigForW(r.w)-f.cig); return SCALE[String(g)]; }
   function prev2(el){ el=el||document.getElementById('previewBody'); if(!el)return;
     const f=maxForecast();
     let html='<div style="margin-bottom:8px"><strong>Day '+OL.day+' snownado forecast ceiling:</strong> '+
       (f.prob||'—')+'% / CIG'+(f.cig||'—')+'</div>';
     if(!R().length){ html+='<p style="color:#8aa0bd">No reports to verify.</p>'; el.innerHTML=html; return; }
-    let worst='verified';
+    const gaps=[];
     html+='<div class="preview-text">';
-    R().forEach(r=>{ const [v,c]=verdict(r,f);
-      if(v==='under-warned')worst='under-warned'; else if(v==='over-warned'&&worst==='verified')worst='over-warned';
-      html+='\n'+r.w+' '+r.city+' ('+r.note+') → predicted CIG'+(f.cig||0)+' → '+v.toUpperCase(); });
-    html+='\n\nNET RESULT: '+worst.toUpperCase()+'</div>';
+    R().forEach(r=>{ const g=clampGap(cigForW(r.w)-f.cig); gaps.push(g);
+      html+='\n'+r.w+' '+r.city+' ('+r.note+') → predicted CIG'+(f.cig||0)+' → '+SCALE[String(g)][0]; });
+    // Net: under-warning is the worst operational outcome, so report the most under-warned
+    // (largest +gap) if any exist; otherwise the most over-warned (most negative gap).
+    const maxG=Math.max(...gaps), minG=Math.min(...gaps);
+    const netGap = maxG>0 ? maxG : minG;
+    html+='\n\nNET RESULT: '+SCALE[String(netGap)][0]+'</div>';
     el.innerHTML=html;
   }
   _setPrev(prev2);
