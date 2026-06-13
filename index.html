@@ -308,7 +308,6 @@ SPC.outlook = (function(){
     SPC.map.start(null,(pts)=>{ areaList().push({points:pts,level:curLevel,day:S.day}); render(); });
   }
   function clearPanel(){ S.areas[areaKey()]=[]; if(S.panel!=='categorical') S.areas['cig_'+S.panel]=[]; }
-  // preview() defined in Task 10.
   let preview=()=>{};
   function _wire(r,p){render=r;preview=p;}
   function styleFor(level){
@@ -326,6 +325,52 @@ SPC.outlook = (function(){
     SPC.map.renderPolys(polys);
     const pv=document.getElementById('previewBody'); if(pv) preview(pv);
   }
+  // Map highest drawn prob (per hazard) to a categorical tier rank.
+  function probToRank(panel,maxP){
+    if(panel==='snownado'){ if(maxP>=30)return 5; if(maxP>=15)return 4; if(maxP>=10)return 3; if(maxP>=5)return 2; if(maxP>=2)return 1; return 0; }
+    if(maxP>=60)return 5; if(maxP>=45)return 4; if(maxP>=30)return 3; if(maxP>=15)return 2; if(maxP>=5)return 1; return 0;
+  }
+  function suggestTier(){
+    let rank=0;
+    ['snownado','blizzardWind','snowSquall'].forEach(h=>{
+      const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
+      if(ps.length) rank=Math.max(rank,probToRank(h,Math.max(...ps)));
+    });
+    // Extreme gate: a CIG4 snownado area present AND an 80% snownado prob area present.
+    const cig4=(S.areas.cig_snownado||[]).some(a=>a.level==='cig4'&&a.day==S.day);
+    const p80=(S.areas.snownado||[]).some(a=>+a.level.slice(1)>=60&&a.day==S.day);
+    if(cig4&&p80&&S.day!==3) return 'EXTR';
+    return T.TIERS[rank].key;
+  }
+  function narrative(){
+    const tier=T.tier(suggestTier());
+    const lines=[];
+    lines.push('SNOW PREDICTION CENTER DAY '+S.day+' CONVECTIVE-SNOW OUTLOOK');
+    lines.push('VALID '+(S.meta.issued||'(set valid time)'));
+    lines.push('');
+    lines.push('...CATEGORICAL OUTLOOK: '+tier.name.toUpperCase()+' RISK...');
+    if(tier.key==='EXTR') lines.push('** EXTREME RISK — CATASTROPHIC SNOWNADO OUTBREAK POSSIBLE (≥80% CIG4) **');
+    ['snownado','blizzardWind','snowSquall'].forEach(h=>{
+      const ps=(S.areas[h]||[]).filter(a=>a.day==S.day).map(a=>+a.level.slice(1)).filter(n=>!isNaN(n));
+      const cigs=(S.areas['cig_'+h]||[]).filter(a=>a.day==S.day).map(a=>a.level.toUpperCase());
+      if(ps.length||cigs.length){
+        lines.push('');
+        lines.push('...'+T.HAZARDS[h].name.toUpperCase()+'...');
+        if(ps.length) lines.push('  Max probability: '+Math.max(...ps)+'%');
+        if(cigs.length) lines.push('  Conditional intensity: '+[...new Set(cigs)].join(', '));
+      }
+    });
+    return lines.join('\n');
+  }
+  function previewFn(el){
+    el.innerHTML='<div style="margin-bottom:8px"><strong>Suggested:</strong> '+T.tier(suggestTier()).name+' Risk</div>'+
+      '<div class="preview-text" id="olText"></div>'+
+      '<div style="margin-top:8px"><button id="olPng">⬇ PNG</button> <button id="olCopy">⧉ Copy text</button></div>';
+    el.querySelector('#olText').textContent=narrative();
+    el.querySelector('#olPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='snow-outlook-day'+S.day+'.png';a.click();});
+    el.querySelector('#olCopy').onclick=()=>SPC.state.copyText(narrative());
+  }
+  _wire(render,previewFn);
   SPC.tabs.register('outlook',{tools, preview:(el)=>preview(el)});
   return {tools,render:()=>render(),_wire,get curLevel(){return curLevel;}};
 })();
