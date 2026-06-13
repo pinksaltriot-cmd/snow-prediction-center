@@ -449,14 +449,15 @@ SPC.outlook = (function(){
   function expectedSnow(tierKey){
     if(tierKey==='ZERO') return 'None';
     const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
-    // Snowfall from INDIVIDUAL hazard intensities (not the categorical): blizzard wind barely
-    // adds (it redistributes), snow squalls add burst totals by rate, and snownado deposition
-    // explodes with CIG — so wind-only Marginal barely beats General while Extreme flies off the charts.
+    // Snowfall = EVERY hazard's individual intensity (CIG) scaled by its probability. Snownado
+    // deposition explodes with CIG, squalls add burst totals by rate, and high-end blizzard wind
+    // is a major contributor (≥65 mph CIG3 is a big deal) — only a low-end Marginal wind nudges General.
     const maxP=Math.max(sn.p,bz.p,sq.p);
     let lo=1, hi=2+maxP/100*2;                                  // synoptic base snow shield
-    if(sq.p){ const a=({1:[3,7],2:[8,18]})[sq.cig]||[1,3]; lo+=a[0]; hi+=a[1]; }
-    if(sn.p){ const a=({1:[2,6],2:[7,16],3:[16,36],4:[36,90]})[sn.cig]||[1,3]; lo+=a[0]; hi+=a[1]; }
-    if(bz.p){ hi+=2; }                                          // blizzard wind: drifting only
+    function addHaz(p,cig,table,dflt){ if(!p)return; const a=table[cig]||dflt; const f=0.6+0.4*p/100; lo+=a[0]*f; hi+=a[1]*f; }
+    addHaz(sq.p,sq.cig,{1:[3,7],2:[8,18]},[1,3]);              // snow squalls (rate)
+    addHaz(sn.p,sn.cig,{1:[2,6],2:[7,16],3:[16,36],4:[36,90]},[1,3]); // snownado deposition
+    addHaz(bz.p,bz.cig,{1:[1,3],2:[6,15],3:[16,38]},[0,2]);    // blizzard wind (heavy snow + drifting)
     lo=Math.max(0,Math.round(lo)); hi=Math.round(hi);
     const txt=lo+'–'+hi+'″'+(hi>=60?'+':'');
     const mods=(SNOW_MODS[tierKey]||[]).slice();
