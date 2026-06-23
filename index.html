@@ -1160,10 +1160,10 @@ SPC.tabs.show('outlook');
     {d:19,t:'2:44 AM', p:'Pacific, MO',                la:38.48,lo:-90.74,W:3,mi:0.9,mph:74,sw:1},
     {d:19,t:'2:55 AM', p:'Eureka, MO',                 la:38.50,lo:-90.63,W:2,mi:0.7,mph:68},
     {d:19,t:'3:19 AM', p:'Kirkwood, MO',               la:38.58,lo:-90.41,W:2,mi:0.5,mph:61,n:'Enters the St. Louis metro.',warn:'SNOWNADO WARNING — St. Louis County.'},
-    {d:19,t:'3:38 AM', p:'St. Louis, MO (Gateway Arch)',la:38.63,lo:-90.20,W:2,mi:0.4,mph:57,sw:1,n:'Passes within sight of the Arch.',warn:'SNOWNADO WARNING — City of St. Louis.'},
+    {d:19,t:'3:38 AM', p:'St. Louis, MO (Gateway Arch)',la:38.63,lo:-90.20,W:2,mi:0.4,mph:57,sw:1,n:'Passes within sight of the Arch.',warn:'SNOWNADO WARNING — City of St. Louis.',issue:'Mesoscale Discussion #219 — heavy snow & blizzard conditions continue behind the vortex across eastern Missouri; valid until 7 AM.'},
     {d:19,t:'3:49 AM', p:'East St. Louis, IL',         la:38.62,lo:-90.15,W:1,mi:0.3,mph:53,n:'Crosses the Mississippi into Illinois — its 4th state.',warn:'SNOWNADO WARNING — St. Clair County, IL.'},
     {d:19,t:'4:07 AM', p:'Belleville, IL',             la:38.52,lo:-89.98,W:1,mi:0.2,mph:45},
-    {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.',warn:'All warnings allowed to expire as the circulation dissipates.'}
+    {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.',warn:'The last Illinois county warnings run a few more minutes (to ~5:10 AM) for residual heavy snow; every upstream warning had already expired behind the storm.'}
   ];
 
   const RECORDS=[
@@ -1291,6 +1291,11 @@ SPC.tabs.show('outlook');
       if(w.warn) L.push('             ⚠ '+w.warn);
       if(w.issue) L.push('             ▸ '+w.issue);
     });
+    L.push('');
+    L.push('  Note: each county warning expired as the snownado moved on (most well');
+    L.push('  before the 4:31 AM rope-out); the downstream Snownado Watches #913 and');
+    L.push('  #914 and Mesoscale Discussion #219 stayed valid until 6–7 AM for the');
+    L.push('  blizzard left in its wake.');
     L.push('');
     L.push('...AFTERMATH...');
     L.push('');
