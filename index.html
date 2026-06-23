@@ -53,6 +53,7 @@
     <button data-tab="hwo">HWO / Hydro</button>
     <button data-tab="reports">Storm Reports</button>
     <button data-tab="cyclone">🌀 Cyclone Override</button>
+    <button data-tab="ozark">🌪️ 2026 Ozark Super Snownado</button>
   </nav>
   <div style="display:flex;gap:6px">
     <button id="btnSave">Save</button><button id="btnLoad">Load</button><button id="btnReset">Reset</button>
@@ -306,7 +307,7 @@ SPC.tabs = (function(){
   return {register,show,get current(){return current;}};
 })();
 // Placeholder renderers so tabs work before product sections land:
-['outlook','md','watch','warning','hwo','reports','cyclone'].forEach(k=>{
+['outlook','md','watch','warning','hwo','reports','cyclone','ozark'].forEach(k=>{
   if(!SPC.tabs) return;
   SPC.tabs.register(k,{tools:el=>el.innerHTML='<p style="color:#8aa0bd">'+k+' tools…</p>',
                        preview:el=>el.innerHTML='<div class="preview-text">'+k+' preview…</div>'});
@@ -661,7 +662,7 @@ SPC.tabs.show('outlook');
     L.push(''); L.push('** MESO-GAMMA — PINPOINT, SHORT-FUSED THREAT **');
     L.push(''); L.push('SUMMARY...A very localized, rapidly evolving threat for '+hz.toLowerCase()+
       ' is developing on the meso-gamma scale (single cells / narrow bands). High-confidence W2+ snownadoes or blizzard wind ≥60 mph are possible with little lead time. '+w.phrase+'.');
-    L.push(''); L.push('IMMEDIATE CONCERN...Impacts may arrive within minutes over a small area. Persons in or near the highlighted zone should be prepared to take protective action immediately; do not wait for a watch.');
+    L.push(''); L.push('IMMEDIATE CONCERN...Impacts may arrive within minutes over a small area. People in or near the highlighted zone should be prepared to take protective action immediately; do not wait for a watch.');
     L.push(''); L.push('DISCUSSION...Pinpoint forcing and intense local circulations favor brief but violent '+hz.toLowerCase()+
       '. Spatial coverage is small but intensity potential is high. Trends will be reassessed on a minute-to-minute basis.');
     L.push(''); L.push('Forecaster: '+(S.forecaster||'SPC'));
@@ -1112,6 +1113,190 @@ SPC.tabs.show('outlook');
     el.querySelector('#cyCopy').onclick=()=>SPC.state.copyText(L.join('\n'));
   }
   SPC.tabs.register('cyclone',{tools,preview,render});
+})();
+</script>
+<script>
+// ===== SECTION K: THE 2026 OZARK SUPER SNOWNADO (archived case study) =====
+(function(){
+  const T=SPC.tax;
+  // lat/lon -> SVG (same linear fit as the basemap, see Section J)
+  function proj(lat,lon){ return [15.8463*lon+2050.93, -23.1797*lat+1176.93]; }
+  const PXMI=0.31;          // px per mile on the basemap
+  const MAG=9;              // swath-width exaggeration so a few-mile vortex is visible at national scale
+  // Whiteout-scale colors (the taxonomy carries names/winds but no colors)
+  const WCOL={0:'#dbe6ff',1:'#9ec5ff',2:'#6f9bff',3:'#ffd24d',4:'#ffa366',5:'#e0556d',6:'#b23bff'};
+
+  // Continuous meteorological history. Times are CST. d=calendar day (Dec 18 or 19).
+  // W=Whiteout intensity, mi=path width, s=peak snowfall rate (in/hr), sw=surface width in the text,
+  // n=narrative note. Track runs ENE from ~30 mi W of Tulsa, OK across MO and into IL.
+  const WPTS=[
+    {d:18,t:'3:42 PM', p:'Cleveland, OK',              la:36.31,lo:-96.47,W:1,mi:0.2,mph:48,sw:1,n:'Touchdown in open country ~30 mi W of Tulsa; a thin rope of rotating snow.'},
+    {d:18,t:'3:58 PM', p:'Keystone Lake, OK',          la:36.15,lo:-96.25,W:2,mi:0.4,mph:63},
+    {d:18,t:'4:09 PM', p:'Sand Springs, OK',           la:36.14,lo:-96.11,W:3,mi:0.7,mph:79,s:14,sw:1,n:'Rapid intensification as it ingests the arctic dryline.'},
+    {d:18,t:'4:31 PM', p:'Tulsa, OK (downtown)',       la:36.15,lo:-95.99,W:4,mi:1.2,mph:94,s:18,sw:1,n:'Crosses the Arkansas River into downtown — first major metro hit.'},
+    {d:18,t:'4:58 PM', p:'Catoosa, OK',                la:36.19,lo:-95.75,W:5,mi:1.7,mph:109,sw:1},
+    {d:18,t:'5:22 PM', p:'Claremore, OK',              la:36.31,lo:-95.62,W:5,mi:2.1,mph:118,n:'Multiple-vortex structure resolved on radar.'},
+    {d:18,t:'5:54 PM', p:'Pryor Creek, OK',            la:36.31,lo:-95.31,W:6,mi:2.5,mph:128,s:24,sw:1,n:'FIRST W6 (Cryonic) ever recorded — winds cross 121 mph.'},
+    {d:18,t:'6:18 PM', p:'Locust Grove, OK',           la:36.20,lo:-95.17,W:6,mi:2.8,mph:149},
+    {d:18,t:'6:53 PM', p:'Grove, OK',                  la:36.59,lo:-94.77,W:6,mi:3.1,mph:166,sw:1,n:'Grand Lake snow-band merger feeds the circulation.'},
+    {d:18,t:'7:14 PM', p:'Baxter Springs, KS',         la:37.02,lo:-94.74,W:6,mi:3.3,mph:176,n:'Clips the extreme SE corner of Kansas.'},
+    {d:18,t:'7:33 PM', p:'Joplin, MO',                 la:37.08,lo:-94.51,W:6,mi:3.6,mph:187,s:28,sw:1,n:'Crosses into Missouri; snowfall rate reaches 28 in/hr.'},
+    {d:18,t:'7:58 PM', p:'Carthage, MO',               la:37.18,lo:-94.31,W:6,mi:3.8,mph:195},
+    {d:18,t:'8:21 PM', p:'Sarcoxie, MO',               la:37.07,lo:-94.12,W:6,mi:4.0,mph:202,sw:1},
+    {d:18,t:'8:49 PM', p:'Mount Vernon, MO',           la:37.10,lo:-93.82,W:6,mi:4.1,mph:208,n:'Sustained W6 for over two hours — without precedent.'},
+    {d:18,t:'9:16 PM', p:'Republic, MO',               la:37.12,lo:-93.48,W:6,mi:4.3,mph:214,sw:1,n:'RECORD WIDTH — 4.3 mi, the widest snownado ever measured.'},
+    {d:18,t:'9:34 PM', p:'Springfield, MO',            la:37.21,lo:-93.29,W:6,mi:4.2,mph:217,s:34,sw:1,n:'PEAK INTENSITY — winds est. 217 mph, 34 in/hr; the Queen City of the Ozarks in the core.'},
+    {d:18,t:'10:02 PM',p:'Strafford, MO',              la:37.27,lo:-93.12,W:6,mi:4.0,mph:212},
+    {d:18,t:'10:27 PM',p:'Marshfield, MO',             la:37.34,lo:-92.91,W:6,mi:3.7,mph:202,sw:1},
+    {d:18,t:'10:41 PM',p:'Niangua, MO',                la:37.38,lo:-92.83,W:6,mi:3.5,mph:193},
+    {d:18,t:'11:19 PM',p:'Lebanon, MO',                la:37.68,lo:-92.66,W:6,mi:3.2,mph:174,n:'Still W6 nearly 5.5 hours after first attaining it.'},
+    {d:19,t:'12:14 AM',p:'St. Robert–Waynesville, MO', la:37.83,lo:-92.20,W:5,mi:2.7,mph:119,sw:1,n:'Gradual weakening begins along the I-44 corridor.'},
+    {d:19,t:'12:51 AM',p:'Rolla, MO',                  la:37.95,lo:-91.77,W:5,mi:2.3,mph:107,s:16},
+    {d:19,t:'1:08 AM', p:'St. James, MO',              la:38.00,lo:-91.61,W:4,mi:1.9,mph:98},
+    {d:19,t:'1:33 AM', p:'Cuba, MO',                   la:38.06,lo:-91.40,W:4,mi:1.6,mph:89,sw:1},
+    {d:19,t:'2:01 AM', p:'Sullivan, MO',               la:38.21,lo:-91.16,W:3,mi:1.2,mph:83},
+    {d:19,t:'2:44 AM', p:'Pacific, MO',                la:38.48,lo:-90.74,W:3,mi:0.9,mph:74,sw:1},
+    {d:19,t:'2:55 AM', p:'Eureka, MO',                 la:38.50,lo:-90.63,W:2,mi:0.7,mph:68},
+    {d:19,t:'3:19 AM', p:'Kirkwood, MO',               la:38.58,lo:-90.41,W:2,mi:0.5,mph:61,n:'Enters the St. Louis metro.'},
+    {d:19,t:'3:38 AM', p:'St. Louis, MO (Gateway Arch)',la:38.63,lo:-90.20,W:2,mi:0.4,mph:57,sw:1,n:'Passes within sight of the Arch.'},
+    {d:19,t:'3:49 AM', p:'East St. Louis, IL',         la:38.62,lo:-90.15,W:1,mi:0.3,mph:53,n:'Crosses the Mississippi into Illinois — its 4th state.'},
+    {d:19,t:'4:07 AM', p:'Belleville, IL',             la:38.52,lo:-89.98,W:1,mi:0.2,mph:45},
+    {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.'}
+  ];
+
+  const RECORDS=[
+    ['On the ground','12 h 49 min, continuous'],
+    ['Path length','~470 miles'],
+    ['States crossed','Oklahoma · Kansas · Missouri · Illinois (4)'],
+    ['Peak intensity','W6 “Cryonic” — winds est. 217 mph'],
+    ['Record width','4.3 mi (near Republic–Springfield, MO)'],
+    ['Peak snowfall rate','up to 34 in/hr in the core'],
+    ['Core-swath storm total','up to 96 in (8 ft), drifts past 31 ft']
+  ];
+
+  // Forecast evolution — products issued in the days/hours before touchdown.
+  const PRELUDE=[
+    {d:'December 16',t:'3:48 AM', prod:'Day 3 Snow Outlook',         n:'MARGINAL risk introduced across eastern Oklahoma and the SW Missouri Ozarks for Friday as a potent arctic cyclone and deep moisture return are flagged.'},
+    {d:'December 17',t:'1:12 AM', prod:'Day 2 Outlook',              n:'Upgraded to SLIGHT; first explicit mention of an isolated snownado threat.'},
+    {d:'December 17',t:'3:30 PM', prod:'Day 2 Outlook (update)',     n:'Upgraded to ENHANCED; a 10% hatched snownado area is centered on Tulsa.'},
+    {d:'December 18',t:'2:00 AM', prod:'Day 1 Outlook',              n:'MODERATE risk; 15% hatched snownado probability from NE Oklahoma into the Missouri Ozarks.'},
+    {d:'December 18',t:'11:30 AM',prod:'Day 1 Outlook (upgrade)',    n:'HIGH risk; 30% hatched snownado area — long-track, intense snownadoes expected.'},
+    {d:'December 18',t:'12:45 PM',prod:'Mesoscale Discussion #214',  n:'Explosive destabilization west of Tulsa; watch issuance imminent.'},
+    {d:'December 18',t:'1:15 PM', prod:'Day 1 Outlook (upgrade)',    n:'EXTREME risk — the first ever issued by the SPC; 60% hatched snownado probability.'},
+    {d:'December 18',t:'1:50 PM', prod:'PDS Snownado Watch #911',    n:'Particularly Dangerous Situation watch for NE Oklahoma and SW Missouri until 2 AM.'},
+    {d:'December 18',t:'2:30 PM', prod:'Mesoscale Discussion #215',  n:'Meso-gamma; pinpoints the Sand Springs–Tulsa corridor for an imminent, possibly historic snownado.'},
+    {d:'December 18',t:'3:05 PM', prod:'HWO / Spotter Activation',   n:'Spotter Level 5 (maximum) — trained snow-spotters deployed across the Tulsa metro.'},
+    {d:'December 18',t:'3:38 PM', prod:'Snownado Warning',           n:'Radar-indicated rotation west of Tulsa — issued 4 minutes before touchdown.'}
+  ];
+
+  // Aftermath — storm-total snowfall & peak drift by city [city, inches, drift ft].
+  const AFTER_CITY=[
+    ['Tulsa, OK',71,19],['Claremore, OK',78,22],['Pryor Creek, OK',84,25],['Grove, OK',88,27],
+    ['Joplin, MO',91,29],['Carthage, MO',93,30],['Springfield, MO',96,31],['Marshfield, MO',90,28],
+    ['Lebanon, MO',83,24],['Rolla, MO',68,18],['Sullivan, MO',47,12],['St. Louis, MO',29,7]
+  ];
+  const AFTER_NOTES=[
+    'SPC Whiteout Damage Assessment Teams (WDAT) deployed within hours; three quick-response crews surveyed the path from Cleveland, OK to Centralia, IL.',
+    'Ground and aerial surveys confirmed a continuous W6 “Cryonic” damage track — the first W6 rating ever assigned.',
+    'Springfield, MO logged the highest storm total: 96 in (8.0 ft), with a 31-ft drift burying the north side of downtown — both all-time records.',
+    'Interstate 44 was impassable from Joplin to Rolla for six days; the National Guard cleared drifts exceeding two stories.',
+    'More than 1.4 million customers lost power across four states; drift loading collapsed roofs as far east as the St. Louis metro.',
+    'Final SPC storm survey: the longest-lived, widest, most intense, and snowiest snownado in the modern record — by a wide margin.'
+  ];
+
+  function disc(cx,cy,r){ const p=[]; for(let i=0;i<24;i++){ const a=2*Math.PI*i/24; p.push([Math.round((cx+r*Math.cos(a))*10)/10,Math.round((cy+r*Math.sin(a))*10)/10]); } return p; }
+
+  function render(){
+    const pts=WPTS.map(w=>proj(w.la,w.lo));
+    const half=WPTS.map(w=>Math.max(1.2,w.mi*PXMI*0.5*MAG));
+    // Tapering swath band (perpendicular offsets at each waypoint)
+    const left=[],right=[];
+    for(let i=0;i<pts.length;i++){
+      const a=pts[Math.max(0,i-1)], b=pts[Math.min(pts.length-1,i+1)];
+      const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+      left.push([Math.round((pts[i][0]+nx*half[i])*10)/10, Math.round((pts[i][1]+ny*half[i])*10)/10]);
+      right.push([Math.round((pts[i][0]-nx*half[i])*10)/10, Math.round((pts[i][1]-ny*half[i])*10)/10]);
+    }
+    const polys=[{points:left.concat(right.reverse()),fill:'#7dd3fc',opacity:0.14,stroke:'#7dd3fc',strokeWidth:1,dash:'4 3'}];
+    // Intensity discs at each waypoint
+    WPTS.forEach((w,i)=>polys.push({points:disc(pts[i][0],pts[i][1],half[i]),fill:WCOL[w.W],opacity:0.6,stroke:'#0b1320',strokeWidth:0.6}));
+    // Centerline (out-and-back degenerate polygon so the engine strokes the path)
+    polys.push({points:pts.concat(pts.slice().reverse()),fill:'none',opacity:0,stroke:'#ffffff',strokeWidth:1.4});
+    SPC.map.renderPolys(polys);
+  }
+
+  function chip(w){ return '<span style="display:inline-flex;align-items:center;gap:5px;margin:2px 6px 2px 0;font-size:11px">'+
+    '<span style="width:11px;height:11px;border-radius:2px;background:'+WCOL[+w.t.slice(1)]+';display:inline-block"></span>'+w.t+' '+w.name+'</span>'; }
+
+  function tools(el){
+    el.innerHTML='<h2 class="sec">Archived Case Study</h2>'+
+      '<p style="color:#8aa0bd;font-size:12px;margin:4px 0">A historical meteorological record. The track is plotted on the map at left (swath width exaggerated ~'+MAG+'× so the few-mile vortex is visible at national scale); the full chronology is in the panel at right.</p>'+
+      '<h2 class="sec">Record summary</h2>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        RECORDS.map(r=>'<tr><td style="color:#8aa0bd;padding:3px 8px 3px 0;vertical-align:top;white-space:nowrap">'+r[0]+'</td><td style="color:#cfe2f7;padding:3px 0">'+r[1]+'</td></tr>').join('')+
+      '</table>'+
+      '<h2 class="sec">Whiteout (W) scale</h2>'+
+      '<div>'+T.WHITEOUT.map(chip).join('')+'</div>';
+  }
+
+  function lines(){
+    const L=[];
+    L.push('NATIONAL SNOW PREDICTION CENTER — STORM DATA / METEOROLOGICAL HISTORY');
+    L.push('THE 2026 OZARK SUPER SNOWNADO');
+    L.push('December 16–19, 2026   ·   all times CST');
+    L.push('');
+    L.push('...RECORD SUMMARY...');
+    RECORDS.forEach(r=>L.push('  '+(r[0]+':').padEnd(24)+r[1]));
+    L.push('  By every measure — longevity, intensity, width, and snowfall —');
+    L.push('  the most extreme snownado in the modern record.');
+    L.push('');
+    L.push('...CONDITIONS LEADING UP TO THE STORM (FORECAST EVOLUTION)...');
+    let pd=null;
+    PRELUDE.forEach(e=>{
+      if(e.d!==pd){ pd=e.d; L.push(''); L.push('  ── '+e.d+' ──'); }
+      L.push('  '+e.t.padEnd(9)+e.prod);
+      L.push('             '+e.n);
+    });
+    L.push('');
+    L.push('  3:42 PM   FIRST TOUCHDOWN west of Tulsa, OK — see history below.');
+    L.push('');
+    L.push('...METEOROLOGICAL HISTORY...');
+    let day=null;
+    WPTS.forEach(w=>{
+      if(w.d!==day){ day=w.d; L.push(''); L.push('  ── December '+day+' ──'); }
+      const ws=T.wScale('W'+w.W);
+      let line='  '+w.t.padEnd(9)+w.p.padEnd(30)+'W'+w.W+' '+ws.name.padEnd(13);
+      const tags=[];
+      if(w.mph) tags.push(w.mph+' mph');
+      if(w.sw) tags.push('width '+w.mi.toFixed(1)+' mi');
+      if(w.s)  tags.push(w.s+' in/hr');
+      if(tags.length) line+='· '+tags.join(' · ');
+      L.push(line.replace(/\s+$/,''));
+      if(w.n) L.push('             '+w.n);
+    });
+    L.push('');
+    L.push('...AFTERMATH...');
+    L.push('');
+    L.push('  Storm-total snowfall & peak drifts (selected cities along the path):');
+    AFTER_CITY.forEach(c=>L.push('    '+c[0].padEnd(26)+String(c[1]+' in').padEnd(9)+'· drifts to '+c[2]+' ft'));
+    L.push('');
+    L.push('  Damage survey & impacts:');
+    AFTER_NOTES.forEach(n=>L.push('    • '+n));
+    L.push('');
+    L.push('...END...');
+    return L;
+  }
+
+  function preview(el){
+    const L=lines();
+    el.innerHTML='<div class="preview-text" id="ozText"></div>'+
+      '<div style="margin-top:8px"><button id="ozPng">⬇ PNG</button> <button id="ozCopy">⧉ Copy history</button></div>';
+    el.querySelector('#ozText').textContent=L.join('\n');
+    el.querySelector('#ozPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='ozark-super-snownado.png';a.click();});
+    el.querySelector('#ozCopy').onclick=()=>SPC.state.copyText(L.join('\n'));
+  }
+
+  SPC.tabs.register('ozark',{tools,preview,render});
 })();
 </script>
 <script>
