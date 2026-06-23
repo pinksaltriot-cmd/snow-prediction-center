@@ -247,7 +247,10 @@ SPC.map = (function(){
     });
   }
   function clearLayers(){ layersG.innerHTML=''; }
-  return {start,cancel,renderPolys,clearLayers,ptsAttr};
+  const DEFAULT_VB='0 0 960 600';
+  function setView(x,y,w,h){ svg.setAttribute('viewBox',[x,y,w,h].map(n=>Math.round(n*10)/10).join(' ')); }
+  function resetView(){ svg.setAttribute('viewBox',DEFAULT_VB); }
+  return {start,cancel,renderPolys,clearLayers,ptsAttr,setView,resetView};
 })();
 </script>
 <script>
@@ -297,7 +300,7 @@ SPC.tabs = (function(){
     document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
     const tools=document.getElementById('toolBody'); tools.innerHTML='';
     const prev=document.getElementById('previewBody'); prev.innerHTML='';
-    SPC.map.clearLayers(); SPC.map.cancel();
+    SPC.map.clearLayers(); SPC.map.cancel(); SPC.map.resetView();
     if(renderers[key]){ renderers[key].tools(tools); renderers[key].preview(prev);
       if(renderers[key].render) renderers[key].render(); }
   }
@@ -1122,7 +1125,6 @@ SPC.tabs.show('outlook');
   // lat/lon -> SVG (same linear fit as the basemap, see Section J)
   function proj(lat,lon){ return [15.8463*lon+2050.93, -23.1797*lat+1176.93]; }
   const PXMI=0.31;          // px per mile on the basemap
-  const MAG=9;              // swath-width exaggeration so a few-mile vortex is visible at national scale
   // Whiteout-scale colors (the taxonomy carries names/winds but no colors)
   const WCOL={0:'#dbe6ff',1:'#9ec5ff',2:'#6f9bff',3:'#ffd24d',4:'#ffa366',5:'#e0556d',6:'#b23bff'};
 
@@ -1208,7 +1210,17 @@ SPC.tabs.show('outlook');
 
   function render(){
     const pts=WPTS.map(w=>proj(w.la,w.lo));
-    const half=WPTS.map(w=>Math.max(1.2,w.mi*PXMI*0.5*MAG));
+    // Regional view: zoom the SVG to the track's bounding box (basemap + track scale together).
+    let minx=Math.min(...pts.map(p=>p[0])), maxx=Math.max(...pts.map(p=>p[0]));
+    let miny=Math.min(...pts.map(p=>p[1])), maxy=Math.max(...pts.map(p=>p[1]));
+    const padX=(maxx-minx)*0.12+18, padY=(maxy-miny)*0.25+18;
+    minx-=padX; maxx+=padX; miny-=padY; maxy+=padY;
+    let w=maxx-minx, h=maxy-miny; const AR=960/600;
+    if(w/h<AR){ const nw=h*AR; minx-=(nw-w)/2; w=nw; } else { const nh=w/AR; miny-=(nh-h)/2; h=nh; }
+    SPC.map.setView(minx,miny,w,h);
+    // Swath exaggeration tuned to this zoom so a few-mile vortex stays visible but not cartoonish.
+    const mag=Math.max(2,Math.min(10,h*0.05));
+    const half=WPTS.map(w2=>Math.max(0.8,w2.mi*PXMI*0.5*mag));
     // Tapering swath band (perpendicular offsets at each waypoint)
     const left=[],right=[];
     for(let i=0;i<pts.length;i++){
@@ -1230,7 +1242,7 @@ SPC.tabs.show('outlook');
 
   function tools(el){
     el.innerHTML='<h2 class="sec">Archived Case Study</h2>'+
-      '<p style="color:#8aa0bd;font-size:12px;margin:4px 0">A historical meteorological record. The track is plotted on the map at left (swath width exaggerated ~'+MAG+'× so the few-mile vortex is visible at national scale); the full chronology is in the panel at right.</p>'+
+      '<p style="color:#8aa0bd;font-size:12px;margin:4px 0">A historical meteorological record. The track is plotted on a regional map at left (Oklahoma to Illinois; swath width exaggerated for visibility); the full chronology is in the panel at right.</p>'+
       '<h2 class="sec">Record summary</h2>'+
       '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
         RECORDS.map(r=>'<tr><td style="color:#8aa0bd;padding:3px 8px 3px 0;vertical-align:top;white-space:nowrap">'+r[0]+'</td><td style="color:#cfe2f7;padding:3px 0">'+r[1]+'</td></tr>').join('')+
