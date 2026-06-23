@@ -1132,38 +1132,38 @@ SPC.tabs.show('outlook');
   // W=Whiteout intensity, mi=path width, s=peak snowfall rate (in/hr), sw=surface width in the text,
   // n=narrative note. Track runs ENE from ~30 mi W of Tulsa, OK across MO and into IL.
   const WPTS=[
-    {d:18,t:'3:42 PM', p:'Cleveland, OK',              la:36.31,lo:-96.47,W:1,mi:0.2,mph:48,sw:1,n:'Touchdown in open country ~30 mi W of Tulsa; a thin rope of rotating snow.'},
+    {d:18,t:'3:42 PM', p:'Cleveland, OK',              la:36.31,lo:-96.47,W:1,mi:0.2,mph:48,sw:1,n:'Touchdown in open country ~30 mi W of Tulsa; a thin rope of rotating snow.',warn:'SNOWNADO WARNING issued — Pawnee, Creek & western Tulsa Counties (the first ground warning).'},
     {d:18,t:'3:58 PM', p:'Keystone Lake, OK',          la:36.15,lo:-96.25,W:2,mi:0.4,mph:63},
-    {d:18,t:'4:09 PM', p:'Sand Springs, OK',           la:36.14,lo:-96.11,W:3,mi:0.7,mph:79,s:14,sw:1,n:'Rapid intensification as it ingests the arctic dryline.'},
-    {d:18,t:'4:31 PM', p:'Tulsa, OK (downtown)',       la:36.15,lo:-95.99,W:4,mi:1.2,mph:94,s:18,sw:1,n:'Crosses the Arkansas River into downtown — first major metro hit.'},
-    {d:18,t:'4:58 PM', p:'Catoosa, OK',                la:36.19,lo:-95.75,W:5,mi:1.7,mph:109,sw:1},
-    {d:18,t:'5:22 PM', p:'Claremore, OK',              la:36.31,lo:-95.62,W:5,mi:2.1,mph:118,n:'Multiple-vortex structure resolved on radar.'},
-    {d:18,t:'5:54 PM', p:'Pryor Creek, OK',            la:36.31,lo:-95.31,W:6,mi:2.5,mph:128,s:24,sw:1,n:'FIRST W6 (Cryonic) ever recorded — winds cross 121 mph.'},
+    {d:18,t:'4:09 PM', p:'Sand Springs, OK',           la:36.14,lo:-96.11,W:3,mi:0.7,mph:79,s:14,sw:1,n:'Rapid intensification as it ingests the arctic dryline.',warn:'Upgraded to DS SNOWNADO WARNING — western Tulsa metro.'},
+    {d:18,t:'4:31 PM', p:'Tulsa, OK (downtown)',       la:36.15,lo:-95.99,W:4,mi:1.2,mph:94,s:18,sw:1,n:'Crosses the Arkansas River into downtown — first major metro hit.',warn:'Upgraded to PDS SNOWNADO WARNING — Tulsa metro; “do not be caught in the open.”'},
+    {d:18,t:'4:58 PM', p:'Catoosa, OK',                la:36.19,lo:-95.75,W:5,mi:1.7,mph:109,sw:1,warn:'SNOWNADO EMERGENCY declared — the first of the event.'},
+    {d:18,t:'5:22 PM', p:'Claremore, OK',              la:36.31,lo:-95.62,W:5,mi:2.1,mph:118,n:'Multiple-vortex structure resolved on radar.',warn:'SNOWNADO EMERGENCY — Rogers County.'},
+    {d:18,t:'5:54 PM', p:'Pryor Creek, OK',            la:36.31,lo:-95.31,W:6,mi:2.5,mph:128,s:24,sw:1,n:'FIRST W6 (Cryonic) ever recorded — winds cross 121 mph.',warn:'SNOWNADO EMERGENCY — Mayes County (W6 confirmed).',issue:'Mesoscale Discussion #217 — historic corridor developing downstream into SW Missouri.'},
     {d:18,t:'6:18 PM', p:'Locust Grove, OK',           la:36.20,lo:-95.17,W:6,mi:2.8,mph:149},
-    {d:18,t:'6:53 PM', p:'Grove, OK',                  la:36.59,lo:-94.77,W:6,mi:3.1,mph:166,sw:1,n:'Grand Lake snow-band merger feeds the circulation.'},
-    {d:18,t:'7:14 PM', p:'Baxter Springs, KS',         la:37.02,lo:-94.74,W:6,mi:3.3,mph:176,n:'Clips the extreme SE corner of Kansas.'},
-    {d:18,t:'7:33 PM', p:'Joplin, MO',                 la:37.08,lo:-94.51,W:6,mi:3.6,mph:187,s:28,sw:1,n:'Crosses into Missouri; snowfall rate reaches 28 in/hr.'},
-    {d:18,t:'7:58 PM', p:'Carthage, MO',               la:37.18,lo:-94.31,W:6,mi:3.8,mph:195},
+    {d:18,t:'6:53 PM', p:'Grove, OK',                  la:36.59,lo:-94.77,W:6,mi:3.1,mph:166,sw:1,n:'Grand Lake snow-band merger feeds the circulation.',warn:'SNOWNADO EMERGENCY — Delaware County.'},
+    {d:18,t:'7:14 PM', p:'Baxter Springs, KS',         la:37.02,lo:-94.74,W:6,mi:3.3,mph:176,n:'Clips the extreme SE corner of Kansas.',warn:'SNOWNADO EMERGENCY — Cherokee County, KS.'},
+    {d:18,t:'7:33 PM', p:'Joplin, MO',                 la:37.08,lo:-94.51,W:6,mi:3.6,mph:187,s:28,sw:1,n:'Crosses into Missouri; snowfall rate reaches 28 in/hr.',warn:'SNOWNADO EMERGENCY — Joplin & Jasper County.',issue:'PDS Snownado Watch #913 — central & eastern Missouri (Springfield to Rolla) until 6 AM.'},
+    {d:18,t:'7:58 PM', p:'Carthage, MO',               la:37.18,lo:-94.31,W:6,mi:3.8,mph:195,warn:'SNOWNADO EMERGENCY — Carthage / Jasper County.'},
     {d:18,t:'8:21 PM', p:'Sarcoxie, MO',               la:37.07,lo:-94.12,W:6,mi:4.0,mph:202,sw:1},
-    {d:18,t:'8:49 PM', p:'Mount Vernon, MO',           la:37.10,lo:-93.82,W:6,mi:4.1,mph:208,n:'Sustained W6 for over two hours — without precedent.'},
-    {d:18,t:'9:16 PM', p:'Republic, MO',               la:37.12,lo:-93.48,W:6,mi:4.3,mph:214,sw:1,n:'RECORD WIDTH — 4.3 mi, the widest snownado ever measured.'},
-    {d:18,t:'9:34 PM', p:'Springfield, MO',            la:37.21,lo:-93.29,W:6,mi:4.2,mph:217,s:34,sw:1,n:'PEAK INTENSITY — winds est. 217 mph, 34 in/hr; the Queen City of the Ozarks in the core.'},
-    {d:18,t:'10:02 PM',p:'Strafford, MO',              la:37.27,lo:-93.12,W:6,mi:4.0,mph:212},
+    {d:18,t:'8:49 PM', p:'Mount Vernon, MO',           la:37.10,lo:-93.82,W:6,mi:4.1,mph:208,n:'Sustained W6 for over two hours — without precedent.',warn:'SNOWNADO EMERGENCY — Lawrence County.'},
+    {d:18,t:'9:16 PM', p:'Republic, MO',               la:37.12,lo:-93.48,W:6,mi:4.3,mph:214,sw:1,n:'RECORD WIDTH — 4.3 mi, the widest snownado ever measured.',warn:'EXTREME EMERGENCY — the first ever issued by the SPC; a category reserved for this storm and never used before or since.'},
+    {d:18,t:'9:34 PM', p:'Springfield, MO',            la:37.21,lo:-93.29,W:6,mi:4.2,mph:217,s:34,sw:1,n:'PEAK INTENSITY — winds est. 217 mph, 34 in/hr; the Queen City of the Ozarks in the core.',warn:'EXTREME EMERGENCY continues — Greater Springfield ordered below grade.'},
+    {d:18,t:'10:02 PM',p:'Strafford, MO',              la:37.27,lo:-93.12,W:6,mi:4.0,mph:212,warn:'SNOWNADO EMERGENCY — eastern Greene County.'},
     {d:18,t:'10:27 PM',p:'Marshfield, MO',             la:37.34,lo:-92.91,W:6,mi:3.7,mph:202,sw:1},
     {d:18,t:'10:41 PM',p:'Niangua, MO',                la:37.38,lo:-92.83,W:6,mi:3.5,mph:193},
-    {d:18,t:'11:19 PM',p:'Lebanon, MO',                la:37.68,lo:-92.66,W:6,mi:3.2,mph:174,n:'Still W6 nearly 5.5 hours after first attaining it.'},
-    {d:19,t:'12:14 AM',p:'St. Robert–Waynesville, MO', la:37.83,lo:-92.20,W:5,mi:2.7,mph:119,sw:1,n:'Gradual weakening begins along the I-44 corridor.'},
-    {d:19,t:'12:51 AM',p:'Rolla, MO',                  la:37.95,lo:-91.77,W:5,mi:2.3,mph:107,s:16},
+    {d:18,t:'11:19 PM',p:'Lebanon, MO',                la:37.68,lo:-92.66,W:6,mi:3.2,mph:174,n:'Still W6 nearly 5.5 hours after first attaining it.',warn:'SNOWNADO EMERGENCY — Laclede County.',issue:'Mesoscale Discussion #218 — long-track snownado nearing the I-44 / St. Louis corridor.'},
+    {d:19,t:'12:14 AM',p:'St. Robert–Waynesville, MO', la:37.83,lo:-92.20,W:5,mi:2.7,mph:119,sw:1,n:'Gradual weakening begins along the I-44 corridor.',warn:'Downgraded to PDS SNOWNADO WARNING — Pulaski County.'},
+    {d:19,t:'12:51 AM',p:'Rolla, MO',                  la:37.95,lo:-91.77,W:5,mi:2.3,mph:107,s:16,warn:'PDS SNOWNADO WARNING — Phelps County.'},
     {d:19,t:'1:08 AM', p:'St. James, MO',              la:38.00,lo:-91.61,W:4,mi:1.9,mph:98},
-    {d:19,t:'1:33 AM', p:'Cuba, MO',                   la:38.06,lo:-91.40,W:4,mi:1.6,mph:89,sw:1},
-    {d:19,t:'2:01 AM', p:'Sullivan, MO',               la:38.21,lo:-91.16,W:3,mi:1.2,mph:83},
+    {d:19,t:'1:33 AM', p:'Cuba, MO',                   la:38.06,lo:-91.40,W:4,mi:1.6,mph:89,sw:1,warn:'Downgraded to DS SNOWNADO WARNING — Crawford County.'},
+    {d:19,t:'2:01 AM', p:'Sullivan, MO',               la:38.21,lo:-91.16,W:3,mi:1.2,mph:83,warn:'SNOWNADO WARNING — Franklin County.',issue:'Snownado Watch #914 — eastern Missouri & SW Illinois, including the St. Louis metro, until 7 AM.'},
     {d:19,t:'2:44 AM', p:'Pacific, MO',                la:38.48,lo:-90.74,W:3,mi:0.9,mph:74,sw:1},
     {d:19,t:'2:55 AM', p:'Eureka, MO',                 la:38.50,lo:-90.63,W:2,mi:0.7,mph:68},
-    {d:19,t:'3:19 AM', p:'Kirkwood, MO',               la:38.58,lo:-90.41,W:2,mi:0.5,mph:61,n:'Enters the St. Louis metro.'},
-    {d:19,t:'3:38 AM', p:'St. Louis, MO (Gateway Arch)',la:38.63,lo:-90.20,W:2,mi:0.4,mph:57,sw:1,n:'Passes within sight of the Arch.'},
-    {d:19,t:'3:49 AM', p:'East St. Louis, IL',         la:38.62,lo:-90.15,W:1,mi:0.3,mph:53,n:'Crosses the Mississippi into Illinois — its 4th state.'},
+    {d:19,t:'3:19 AM', p:'Kirkwood, MO',               la:38.58,lo:-90.41,W:2,mi:0.5,mph:61,n:'Enters the St. Louis metro.',warn:'SNOWNADO WARNING — St. Louis County.'},
+    {d:19,t:'3:38 AM', p:'St. Louis, MO (Gateway Arch)',la:38.63,lo:-90.20,W:2,mi:0.4,mph:57,sw:1,n:'Passes within sight of the Arch.',warn:'SNOWNADO WARNING — City of St. Louis.'},
+    {d:19,t:'3:49 AM', p:'East St. Louis, IL',         la:38.62,lo:-90.15,W:1,mi:0.3,mph:53,n:'Crosses the Mississippi into Illinois — its 4th state.',warn:'SNOWNADO WARNING — St. Clair County, IL.'},
     {d:19,t:'4:07 AM', p:'Belleville, IL',             la:38.52,lo:-89.98,W:1,mi:0.2,mph:45},
-    {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.'}
+    {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.',warn:'All warnings allowed to expire as the circulation dissipates.'}
   ];
 
   const RECORDS=[
@@ -1171,6 +1171,7 @@ SPC.tabs.show('outlook');
     ['Path length','~470 miles'],
     ['States crossed','Oklahoma · Kansas · Missouri · Illinois (4)'],
     ['Peak intensity','W6 “Cryonic” — winds est. 217 mph'],
+    ['Peak warning','EXTREME EMERGENCY (issued only here)'],
     ['Record width','4.3 mi (near Republic–Springfield, MO)'],
     ['Peak snowfall rate','up to 34 in/hr in the core'],
     ['Core-swath storm total','up to 96 in (8 ft), drifts past 31 ft']
@@ -1187,8 +1188,10 @@ SPC.tabs.show('outlook');
     {d:'December 18',t:'1:15 PM', prod:'Day 1 Outlook (upgrade)',    n:'EXTREME risk — the first ever issued by the SPC; 60% hatched snownado probability.'},
     {d:'December 18',t:'1:50 PM', prod:'PDS Snownado Watch #911',    n:'Particularly Dangerous Situation watch for NE Oklahoma and SW Missouri until 2 AM.'},
     {d:'December 18',t:'2:30 PM', prod:'Mesoscale Discussion #215',  n:'Meso-gamma; pinpoints the Sand Springs–Tulsa corridor for an imminent, possibly historic snownado.'},
+    {d:'December 18',t:'2:48 PM', prod:'Mesoscale Discussion #216',  n:'Shifts attention downstream to the Joplin–Springfield corridor — a regional snownado event of historic potential is advertised.'},
     {d:'December 18',t:'3:05 PM', prod:'HWO / Spotter Activation',   n:'Spotter Level 5 (maximum) — trained snow-spotters deployed across the Tulsa metro.'},
-    {d:'December 18',t:'3:38 PM', prod:'Snownado Warning',           n:'Radar-indicated rotation west of Tulsa — issued 4 minutes before touchdown.'}
+    {d:'December 18',t:'3:20 PM', prod:'PDS Snownado Watch #912',    n:'Missouri Ozarks — Joplin to Lebanon — until 6 AM, ahead of the developing snownado.'},
+    {d:'December 18',t:'3:38 PM', prod:'Snownado Warning',           n:'Radar-indicated rotation west of Tulsa — issued 4 minutes before touchdown (Pawnee, Creek & W Tulsa Counties).'}
   ];
 
   // Aftermath — storm-total snowfall & peak drift by city [city, inches, drift ft].
@@ -1285,6 +1288,8 @@ SPC.tabs.show('outlook');
       if(tags.length) line+='· '+tags.join(' · ');
       L.push(line.replace(/\s+$/,''));
       if(w.n) L.push('             '+w.n);
+      if(w.warn) L.push('             ⚠ '+w.warn);
+      if(w.issue) L.push('             ▸ '+w.issue);
     });
     L.push('');
     L.push('...AFTERMATH...');
