@@ -143,10 +143,32 @@ SPC.tax = (function(){
   };
   // Conditional Intensity Groups: shaded zones (NOT hatching). Distinct shade per level.
   const CIG = {
-    snownado:    {1:'20% W2+',2:'30% W2+',3:'40% W2+ (~19% W4+)',4:'sig. chance W5–W6 (violent)'},
+    snownado:    {1:'20% W2+, 6% W3+',2:'30% W2+, 12% W3+',3:'40% W2+, 19% W3+',4:'72% W2+, 50% W3+ — violent, W5–W6 capable'},
     blizzardWind:{1:'gusts ≥35 mph',2:'≥50 mph',3:'≥65 mph'},
     snowSquall:  {1:'≥2″/hr',2:'≥4″/hr, vis ≤¼ mi'}
   };
+  // Snownado conditional-intensity exceedance probabilities on the Whiteout (W) scale, conditional
+  // on a snownado occurring. W2+/W3+ are the real SPC tornado CI table (EF2+/EF3+, 20-yr SPC
+  // mesoanalysis); W1+ is extrapolated one bin up and W4+/W5+/W6 are the violent tail beyond SPC
+  // (their ladder stops at CIG3). Row 0 = "no CIG" baseline. See memory: SPC Conditional Intensity.
+  const CIG_PROB = {
+    snownado:{
+      0:{W1:'49%',W2:'7%', W3:'1%',  W4:'~0.1%',W5:'<0.1%',W6:'<0.1%'},
+      1:{W1:'67%',W2:'20%',W3:'6%',  W4:'~2%',  W5:'~0.5%',W6:'~0.2%'},
+      2:{W1:'75%',W2:'30%',W3:'12%', W4:'~5%',  W5:'~2%',  W6:'~0.8%'},
+      3:{W1:'84%',W2:'40%',W3:'19%', W4:'~9%',  W5:'~4%',  W6:'~2%'},
+      4:{W1:'95%',W2:'72%',W3:'50%', W4:'~34%', W5:'~22%', W6:'~14%'}
+    }
+  };
+  const CIG_PROB_LABELS = {0:'no CIG',1:'CIG1',2:'CIG2',3:'CIG3',4:'CIG4'};
+  function cigProbRow(n){ const r=CIG_PROB.snownado[n]; if(!r) return '';
+    return 'W1+ '+r.W1+', W2+ '+r.W2+', W3+ '+r.W3+', W4+ '+r.W4+', W5+ '+r.W5+', W6 '+r.W6; }
+  function cigProbTable(){ const cols=['W1+','W2+','W3+','W4+','W5+','W6'];
+    const pad=(s,n)=>{s=String(s);return s+' '.repeat(Math.max(1,n-s.length));};
+    const out=[pad('CI',7)+cols.map(c=>pad(c,7)).join('')];
+    for(let n=0;n<=4;n++){ const r=CIG_PROB.snownado[n];
+      out.push(pad(CIG_PROB_LABELS[n],7)+[r.W1,r.W2,r.W3,r.W4,r.W5,r.W6].map(v=>pad(v,7)).join('')); }
+    return out.join('\n'); }
   const PROB_COLORS = {2:'#80c080',5:'#7fc57f',10:'#ffe066',15:'#ffd24d',30:'#ffa366',45:'#e06666',60:'#ee99ee',75:'#cf6fff',80:'#bb55ff',90:'#a83bff'};
   const CIG_SHADE = {1:'rgba(255,255,255,.10)',2:'rgba(255,255,255,.20)',3:'rgba(255,255,255,.32)',4:'rgba(255,255,255,.46)'};
   const WHITEOUT = [
@@ -169,7 +191,7 @@ SPC.tax = (function(){
   function wScale(t){return WHITEOUT.find(w=>w.t===t);}
   // Realized/implied Whiteout ceiling for a given snownado CIG level.
   const CIG_W = {1:'W2',2:'W2',3:'W4',4:'W6'};
-  return {TIERS,HAZARDS,CIG,PROB_COLORS,CIG_SHADE,WHITEOUT,NOTABILITY,SNOWFALL,CIG_W,tier,wScale};
+  return {TIERS,HAZARDS,CIG,CIG_PROB,CIG_PROB_LABELS,cigProbRow,cigProbTable,PROB_COLORS,CIG_SHADE,WHITEOUT,NOTABILITY,SNOWFALL,CIG_W,tier,wScale};
 })();
 </script>
 <script>
@@ -526,9 +548,15 @@ SPC.outlook = (function(){
       L.push('');
       L.push('...'+T.HAZARDS[h].name.toUpperCase()+'...');
       if(r.p) L.push('  Peak probability: '+r.p+'%');
-      if(r.cig) L.push('  Conditional intensity: CIG'+r.cig+' — '+T.CIG[h][r.cig]);
+      if(r.cig){ L.push('  Conditional intensity: CIG'+r.cig+' — '+T.CIG[h][r.cig]);
+        if(h==='snownado') L.push('    W-scale exceedance: '+T.cigProbRow(r.cig)); }
     });
     if(!any){ L.push(''); L.push('...HAZARDS...'); L.push('  No organized convective-snow hazards set.'); }
+    // Snownado conditional-intensity reference table (all CI groups, incl. baseline).
+    if(riskFor('snownado').p || riskFor('snownado').cig){
+      L.push(''); L.push('...SNOWNADO CONDITIONAL-INTENSITY TABLE (W-scale exceedance | if a snownado occurs)...');
+      T.cigProbTable().split('\n').forEach(ln=>L.push('  '+ln));
+    }
     L.push('');
     L.push('...HAZARD OVERVIEW / IMPACTS...');
     L.push('  '+hazardOverview());
