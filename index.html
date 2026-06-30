@@ -492,16 +492,16 @@ SPC.outlook = (function(){
     if(tierKey==='ZERO') return 'None';
     const sn=riskFor('snownado'), bz=riskFor('blizzardWind'), sq=riskFor('snowSquall');
     // Snowfall = EVERY hazard's individual intensity (CIG) scaled by probability, then a
-    // multi-hazard synergy multiplier so overlapping hazards COMPOUND — an all-maxed event
-    // flies by far the highest. Squalls and snownadoes are heavy hitters; high-end wind too.
+    // softened multi-hazard synergy multiplier so overlapping hazards still COMPOUND —
+    // an all-maxed event runs highest. Squalls and snownadoes are heavy hitters; high-end wind too.
     const maxP=Math.max(sn.p,bz.p,sq.p);
-    let lo=1, hi=2+maxP/100*3;                                  // synoptic base snow shield
+    let lo=1, hi=2+maxP/100*2;                                  // synoptic base snow shield
     function addHaz(p,cig,table,dflt){ if(!p)return; const a=table[cig]||dflt; const f=0.6+0.4*p/100; lo+=a[0]*f; hi+=a[1]*f; }
-    addHaz(sq.p,sq.cig,{1:[6,14],2:[16,38]},[1,3]);            // snow squalls (heavy burst rates)
-    addHaz(sn.p,sn.cig,{1:[3,9],2:[12,28],3:[30,68],4:[75,190]},[1,3]); // snownado deposition (explosive)
-    addHaz(bz.p,bz.cig,{1:[1,4],2:[8,20],3:[22,52]},[0,2]);    // blizzard wind (heavy snow + drifting)
+    addHaz(sq.p,sq.cig,{1:[3,7],2:[8,18]},[1,3]);              // snow squalls (burst rates)
+    addHaz(sn.p,sn.cig,{1:[2,6],2:[7,16],3:[16,36],4:[36,90]},[1,3]); // snownado deposition
+    addHaz(bz.p,bz.cig,{1:[1,3],2:[6,15],3:[16,38]},[0,2]);    // blizzard wind (heavy snow + drifting)
     const active=[sn,bz,sq].filter(x=>x.p>0); const sumCig=active.reduce((a,x)=>a+(x.cig||0),0);
-    if(active.length>=2){ const m=1+0.09*(active.length-1)+0.045*sumCig; lo*=m; hi*=m; } // synergy
+    if(active.length>=2){ const m=1+0.045*(active.length-1)+0.022*sumCig; lo*=m; hi*=m; } // softened synergy
     lo=Math.max(0,Math.round(lo)); hi=Math.round(hi);
     const txt=lo+'–'+hi+'″'+(hi>=60?'+':'');
     const mods=(SNOW_MODS[tierKey]||[]).slice();
@@ -1210,6 +1210,23 @@ SPC.tabs.show('outlook');
     {d:19,t:'4:31 AM', p:'near Centralia, IL',         la:38.52,lo:-89.13,W:0,mi:0.1,mph:36,sw:1,n:'Ropes out and dissipates after 12 h 49 min on the ground.',warn:'The last Illinois county warnings run a few more minutes (to ~5:10 AM) for residual heavy snow; every upstream warning had already expired behind the storm.'}
   ];
 
+  // Other (satellite) snownadoes of the same outbreak. The Super-Snownado ingested the
+  // arctic dryline and monopolized the instability, so every one of these was weak (W0–W1),
+  // brief, and narrow. durMin=minutes on the ground, pathMi=path length, widthYd=width (yards),
+  // warn=the warning issued for THIS snownado. Spans all four states the main storm crossed.
+  const SATELLITES=[
+    {d:18,t:'2:57 PM',p:'Okmulgee, OK',          la:35.62,lo:-95.96,W:1,durMin:2,pathMi:0.3,widthYd:30,warn:'Snownado Warning — Okmulgee Co.', n:'First snownado of the outbreak, ~45 min before the main vortex; a brief warm-sector spin-up.'},
+    {d:18,t:'3:19 PM',p:'near Bristow, OK',      la:35.83,lo:-96.39,W:0,durMin:1,pathMi:0.2,widthYd:20,warn:'radar-indicated Snownado Warning — Creek Co.', n:'A momentary spin-up ~23 min before the main snownado, which was already consolidating to the west.'},
+    {d:18,t:'4:46 PM',p:'near Bartlesville, OK', la:36.75,lo:-95.98,W:1,durMin:3,pathMi:0.5,widthYd:45,warn:'Snownado Warning — Washington Co.', n:'Strongest satellite of the day — still only a brief W1 as the main vortex robbed the inflow.'},
+    {d:18,t:'6:34 PM',p:'Neosho, MO',            la:36.87,lo:-94.37,W:1,durMin:2,pathMi:0.3,widthYd:30,warn:'Snownado Warning — Newton Co.'},
+    {d:18,t:'7:05 PM',p:'near Pittsburg, KS',    la:37.41,lo:-94.70,W:1,durMin:2,pathMi:0.3,widthYd:25,warn:'Snownado Warning — Crawford Co., KS', n:'The outbreak’s only Kansas snownado, a brief touchdown on the cool flank of the main track.'},
+    {d:19,t:'3:40 AM',p:'near Carlyle, IL',      la:38.61,lo:-89.37,W:0,durMin:1,pathMi:0.2,widthYd:20,warn:'radar-indicated Snownado Warning — Clinton Co., IL', n:'Last snownado of the outbreak — a momentary spin-up in Illinois just ahead of the dying main vortex.'}
+  ];
+  // "h:mm AM/PM" -> minutes since midnight (for ordering satellites within the timeline).
+  function parseTime(t){ const m=t.match(/(\d+):(\d+)\s*(AM|PM)/i); if(!m) return 0;
+    let h=+m[1]%12; if(/PM/i.test(m[3])) h+=12; return h*60+ +m[2]; }
+  const FIRST_TD={d:18,min:parseTime('3:42 PM')}; // main vortex first touchdown
+
   const RECORDS=[
     ['On the ground','12 h 49 min, continuous'],
     ['Path length','~470 miles'],
@@ -1234,12 +1251,13 @@ SPC.tabs.show('outlook');
     {d:'December 18',t:'11:30 AM',prod:'Day 1 Outlook (upgrade)',    n:'HIGH risk; 30% hatched snownado area — long-track, intense snownadoes expected.'},
     {d:'December 18',t:'11:45 AM',prod:'HWO / Spotter Activation',   n:'Boosted to Spotter Level 4 (Full Activation · Priority Reports) as the risk reaches HIGH — immediate priority reports for any snownado, ≥60 mph blizzard wind, or whiteout.'},
     {d:'December 18',t:'12:45 PM',prod:'Mesoscale Discussion #214',  n:'Explosive destabilization west of Tulsa; watch issuance imminent.'},
-    {d:'December 18',t:'1:15 PM', prod:'Day 1 Outlook (upgrade)',    n:'EXTREME risk — the first ever issued by the SPC; 60% hatched snownado probability.'},
+    {d:'December 18',t:'1:15 PM', prod:'Day 1 Outlook (upgrade)',    n:'EXTREME risk — the first ever issued by the SPC; 60% hatched snownado probability. A few additional, generally weak snownadoes are possible across the broader warm sector, though one dominant, long-track circulation is expected to consolidate most of the available instability.'},
     {d:'December 18',t:'1:50 PM', prod:'PDS Snownado Watch #911',    n:'Particularly Dangerous Situation watch for NE Oklahoma and SW Missouri until 2 AM.'},
     {d:'December 18',t:'2:30 PM', prod:'Mesoscale Discussion #215',  n:'Meso-gamma; pinpoints the Sand Springs–Tulsa corridor for an imminent, possibly historic snownado.'},
     {d:'December 18',t:'2:48 PM', prod:'Mesoscale Discussion #216',  n:'Shifts attention downstream to the Joplin–Springfield corridor — a regional snownado event of historic potential is advertised.'},
     {d:'December 18',t:'3:05 PM', prod:'HWO / Spotter Activation',   n:'Boosted to Spotter Level 5 (Emergency · Continuous Reporting) — maximum activation; trained snow-spotters deployed across the Tulsa metro for continuous, real-time reporting.'},
     {d:'December 18',t:'3:20 PM', prod:'PDS Snownado Watch #912',    n:'Missouri Ozarks — Joplin to Lebanon — until 6 AM, ahead of the developing snownado.'},
+    {d:'December 18',t:'3:29 PM', prod:'Mesoscale Discussion #216A (update)', n:'Two brief, weak snownadoes have already touched down in the warm sector (Okmulgee and Creek Counties). A few more remain possible, but the primary circulation consolidating west of Tulsa is expected to monopolize the inflow and keep any additional snownadoes weak and short-lived.'},
     {d:'December 18',t:'3:38 PM', prod:'Snownado Warning',           n:'Radar-indicated rotation west of Tulsa — issued 4 minutes before touchdown (Pawnee, Creek & W Tulsa Counties).'}
   ];
 
@@ -1286,6 +1304,10 @@ SPC.tabs.show('outlook');
     WPTS.forEach((w,i)=>polys.push({points:disc(pts[i][0],pts[i][1],half[i]),fill:WCOL[w.W],opacity:0.6,stroke:'#0b1320',strokeWidth:0.6}));
     // Centerline (out-and-back degenerate polygon so the engine strokes the path)
     polys.push({points:pts.concat(pts.slice().reverse()),fill:'none',opacity:0,stroke:'#ffffff',strokeWidth:1.4});
+    // Satellite snownadoes: small faint discs (no swath), colored by their weak W rating.
+    const sr=Math.max(1.8,mag*0.32);
+    SATELLITES.forEach(s=>{ const c=proj(s.la,s.lo);
+      polys.push({points:disc(c[0],c[1],sr),fill:WCOL[s.W],opacity:0.5,stroke:'#0b1320',strokeWidth:0.5}); });
     SPC.map.renderPolys(polys);
   }
 
@@ -1315,14 +1337,28 @@ SPC.tabs.show('outlook');
     L.push('  the most extreme snownado in the modern record.');
     L.push('');
     L.push('...CONDITIONS LEADING UP TO THE STORM (FORECAST EVOLUTION)...');
+    // Forecast products plus the satellite snownadoes that touched down before the main vortex,
+    // merged by day then time so the early outbreak reads chronologically.
+    const dayNum=str=>+String(str).replace(/[^0-9]/g,'');
+    const fc=PRELUDE.map(e=>({d:e.d,t:e.t,prod:e.prod,n:e.n}));
+    SATELLITES.filter(s=>s.d<FIRST_TD.d||(s.d===FIRST_TD.d&&parseTime(s.t)<FIRST_TD.min))
+      .forEach(s=>fc.push({d:'December '+s.d,t:s.t,sat:s}));
+    fc.sort((a,b)=>dayNum(a.d)-dayNum(b.d)||parseTime(a.t)-parseTime(b.t));
     let pd=null;
-    PRELUDE.forEach(e=>{
+    fc.forEach(e=>{
       if(e.d!==pd){ pd=e.d; L.push(''); L.push('  ── '+e.d+' ──'); }
-      L.push('  '+e.t.padEnd(9)+e.prod);
-      L.push('             '+e.n);
+      if(e.sat){ const s=e.sat, ws=T.wScale('W'+s.W);
+        L.push('  '+e.t.padEnd(9)+'🌀 SATELLITE SNOWNADO — '+s.p);
+        L.push('             W'+s.W+' '+ws.name+' · on ground '+s.durMin+' min · path '+s.pathMi.toFixed(1)+' mi · width '+s.widthYd+' yd');
+        L.push('             ⚠ '+s.warn);
+        if(s.n) L.push('             '+s.n);
+      } else {
+        L.push('  '+e.t.padEnd(9)+e.prod);
+        L.push('             '+e.n);
+      }
     });
     L.push('');
-    L.push('  3:42 PM   FIRST TOUCHDOWN west of Tulsa, OK — see history below.');
+    L.push('  3:42 PM   FIRST TOUCHDOWN of the main vortex, west of Tulsa, OK — see history below.');
     L.push('');
     L.push('...METEOROLOGICAL HISTORY...');
     let day=null;
@@ -1346,6 +1382,20 @@ SPC.tabs.show('outlook');
     L.push('  #914 and Mesoscale Discussion #219 ran until 6–7 AM, while the area-wide');
     L.push('  Blizzard Watches stayed in effect into the afternoon of Dec 19 (1–4 PM)');
     L.push('  for the blizzard left in its wake.');
+    L.push('');
+    L.push('...OTHER SNOWNADOES OF THE OUTBREAK...');
+    L.push('');
+    L.push('  The dominant snownado ingested the arctic dryline and starved the rest of the');
+    L.push('  warm sector of fuel. Every other snownado of the outbreak stayed weak (W0–W1),');
+    L.push('  brief, and narrow — and none earned more than a base Snownado Warning.');
+    let sd=null;
+    SATELLITES.forEach(s=>{
+      if(s.d!==sd){ sd=s.d; L.push(''); L.push('  ── December '+s.d+' ──'); }
+      const ws=T.wScale('W'+s.W);
+      L.push('  '+s.t.padEnd(9)+s.p.padEnd(24)+'W'+s.W+' '+ws.name.padEnd(15)+'· '+s.durMin+' min · '+s.pathMi.toFixed(1)+' mi · '+s.widthYd+' yd');
+      L.push('             ⚠ '+s.warn);
+      if(s.n) L.push('             '+s.n);
+    });
     L.push('');
     L.push('...AFTERMATH...');
     L.push('');
