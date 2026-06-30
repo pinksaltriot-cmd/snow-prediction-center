@@ -69,6 +69,16 @@ After the main track polys, plot each satellite as a small faint disc (`disc()` 
 projected `la`/`lo`, radius ~ a few px, colored by `WCOL[w.W]`, opacity ~0.5, no swath),
 subordinate to the headline track.
 
+## Past Snownado section (added 2026-06-30)
+
+A `...PAST SNOWNADO — THE NOVEMBER 13 TULSA SNOW DEVIL...` section rendered in `lines()`
+immediately **before** Forecast Evolution. Backed by a `PAST` array of 4 minute-by-minute
+waypoints (`t, tag, mph, widthFt, heightFt, W?, warn?, n?`): the only snownado to hit Tulsa
+in the weeks prior — Nov 13, 2026, peak 40 mph = **W0 "Flurry Spinner"**, 4 minutes, width
+in feet. User supplied the winds/width/height; the W rating, the single Special Weather
+Statement at peak, narrative notes, and summary line are generated. Text-only (no map
+marker) since the regional map depicts the Dec 16–19 track.
+
 ## Out of scope
 No changes to the Outlook/MD/Watch/Warning product builders or the snowfall formula. This
 is additive to the archived `ozark` case study only.

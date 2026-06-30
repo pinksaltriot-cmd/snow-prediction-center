@@ -1227,6 +1227,15 @@ SPC.tabs.show('outlook');
     let h=+m[1]%12; if(/PM/i.test(m[3])) h+=12; return h*60+ +m[2]; }
   const FIRST_TD={d:18,min:parseTime('3:42 PM')}; // main vortex first touchdown
 
+  // The only snownado to hit Tulsa in the weeks before — Nov 13, 2026; a brief, harmless
+  // W0 "Flurry Spinner" (peak 40 mph). Width/height in feet; it never met warning criteria.
+  const PAST=[
+    {t:'4:31 PM',tag:'Touchdown',mph:15,widthFt:5, heightFt:10,n:'A thin snow whirl lifts off a midtown Tulsa parking lot.'},
+    {t:'4:32 PM',tag:'Peak',     mph:40,widthFt:30,heightFt:50,W:0,warn:'Special Weather Statement — brief snow whirl near midtown Tulsa; no threat.'},
+    {t:'4:33 PM',tag:'Weakening',mph:25,widthFt:15,heightFt:30},
+    {t:'4:34 PM',tag:'Rope-out', mph:8, widthFt:2, heightFt:5, n:'Dissipates after 4 minutes; no damage, no injuries.'}
+  ];
+
   const RECORDS=[
     ['On the ground','12 h 49 min, continuous'],
     ['Path length','~470 miles'],
@@ -1335,6 +1344,27 @@ SPC.tabs.show('outlook');
     RECORDS.forEach(r=>L.push('  '+(r[0]+':').padEnd(24)+r[1]));
     L.push('  By every measure — longevity, intensity, width, and snowfall —');
     L.push('  the most extreme snownado in the modern record.');
+    L.push('');
+    L.push('...PAST SNOWNADO — THE NOVEMBER 13 TULSA SNOW DEVIL...');
+    L.push('');
+    L.push('  Five weeks before the catastrophe, on November 13, 2026, Tulsa logged the');
+    L.push('  only snownado of the autumn — a brief, harmless W0 "Flurry Spinner" that spun');
+    L.push('  up in midtown and dissipated four minutes later. It drew a few news cameras');
+    L.push('  and viral phone videos, but no warnings: it never approached snownado-warning');
+    L.push('  criteria. In hindsight, the faintest of preludes.');
+    L.push('');
+    L.push('  ── November 13, 2026 (all times CST) ──');
+    PAST.forEach(p=>{
+      let line='  '+p.t.padEnd(9)+p.tag.padEnd(11)+'· '+p.mph+' mph · '+p.widthFt+' ft wide · '+p.heightFt+' ft high';
+      if(p.W!=null) line+='   [W'+p.W+' '+T.wScale('W'+p.W).name+']';
+      L.push(line);
+      if(p.n) L.push('             '+p.n);
+      if(p.warn) L.push('             ⚠ '+p.warn);
+    });
+    L.push('');
+    L.push('  Peak intensity: W0 (40 mph) · path ~0.1 mi · on the ground 4 minutes.');
+    L.push('  No watches or warnings were issued. Five weeks later the same metro would sit');
+    L.push('  in the core of a W6 “Cryonic” snownado — the strongest ever recorded.');
     L.push('');
     L.push('...CONDITIONS LEADING UP TO THE STORM (FORECAST EVOLUTION)...');
     // Forecast products plus the satellite snownadoes that touched down before the main vortex,
