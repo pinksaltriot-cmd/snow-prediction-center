@@ -54,6 +54,7 @@
     <button data-tab="reports">Storm Reports</button>
     <button data-tab="cyclone">🌀 Cyclone Override</button>
     <button data-tab="ozark">🌪️ 2026 Ozark Super Snownado</button>
+    <button data-tab="snowrecho">π 2027 Pi Day Snowrecho</button>
   </nav>
   <div style="display:flex;gap:6px">
     <button id="btnSave">Save</button><button id="btnLoad">Load</button><button id="btnReset">Reset</button>
@@ -345,7 +346,7 @@ SPC.tabs = (function(){
   return {register,show,get current(){return current;}};
 })();
 // Placeholder renderers so tabs work before product sections land:
-['outlook','md','watch','warning','hwo','reports','cyclone','ozark'].forEach(k=>{
+['outlook','md','watch','warning','hwo','reports','cyclone','ozark','snowrecho'].forEach(k=>{
   if(!SPC.tabs) return;
   SPC.tabs.register(k,{tools:el=>el.innerHTML='<p style="color:#8aa0bd">'+k+' tools…</p>',
                        preview:el=>el.innerHTML='<div class="preview-text">'+k+' preview…</div>'});
@@ -709,7 +710,7 @@ SPC.tabs.show('outlook');
     L.push(''); L.push('** MESO-GAMMA — PINPOINT, SHORT-FUSED THREAT **');
     L.push(''); L.push('SUMMARY...A very localized, rapidly evolving threat for '+hz.toLowerCase()+
       ' is developing on the meso-gamma scale (single cells / narrow bands). High-confidence W2+ snownadoes or blizzard wind ≥60 mph are possible with little lead time. '+w.phrase+'.');
-    L.push(''); L.push('IMMEDIATE CONCERN...Impacts may arrive within minutes over a small area. People in or near the highlighted zone should be prepared to take protective action immediately; do not wait for a watch.');
+    L.push(''); L.push('IMMEDIATE CONCERN...Impacts may arrive within minutes over a small area. Persons in or near the highlighted zone should be prepared to take protective action immediately; do not wait for a watch.');
     L.push(''); L.push('DISCUSSION...Pinpoint forcing and intense local circulations favor brief but violent '+hz.toLowerCase()+
       '. Spatial coverage is small but intensity potential is high. Trends will be reassessed on a minute-to-minute basis.');
     L.push(''); L.push('Forecaster: '+(S.forecaster||'SPC'));
@@ -1449,6 +1450,500 @@ SPC.tabs.show('outlook');
   }
 
   SPC.tabs.register('ozark',{tools,preview,render});
+})();
+</script>
+<script>
+// ===== SECTION L: THE 2027 PI DAY SNOWRECHO (archived case study) =====
+// A snow-derecho: a wide, fast-moving bow echo. Unlike the narrow, rotating 2026 Ozark
+// Super Snownado, the hazard here is WIDESPREAD straight-line blizzard wind + snow squalls,
+// with many embedded (non-dominant) snownadoes riding the leading edge. All March 14, 2027
+// (Pi Day); times CST. Pi motifs are woven in deliberately (3:14 genesis, 314-mi bow,
+// 157 mph = half of 314, a 31.4 mb bomb, a three-way split).
+(function(){
+  const T=SPC.tax;
+  function proj(lat,lon){ return [15.8463*lon+2050.93, -23.1797*lat+1176.93]; } // same fit as Section J
+  const PXMI=0.31;               // px per mile on the basemap
+  // Whiteout-scale colors (for the embedded snownadoes) — matches Section K.
+  const WCOL={0:'#dbe6ff',1:'#9ec5ff',2:'#6f9bff',3:'#ffd24d',4:'#ffa366',5:'#e0556d',6:'#b23bff'};
+  // Snow-Derecho (D) scale — a local classification by peak blizzard-wind gust (mph).
+  const DSCALE=[
+    {t:'D0',lo:40,hi:57, name:'Gust Front', col:'#cfe0ff', dmg:'Blowing snow; brief whiteouts; limbs down'},
+    {t:'D1',lo:58,hi:74, name:'Blowdown',   col:'#8fb6ff', dmg:'Widespread drifting; power flickers; hard travel'},
+    {t:'D2',lo:75,hi:91, name:'Bruiser',    col:'#5f86ff', dmg:'Trees & poles down; roofs peeled; whiteout corridor'},
+    {t:'D3',lo:92,hi:110,name:'Crippler',   col:'#ffcf4d', dmg:'Structural damage; grid failures; travel impossible'},
+    {t:'D4',lo:111,hi:130,name:'Devastator',col:'#ff8f4d', dmg:'Severe swath damage; deep scoured drifts'},
+    {t:'D5',lo:131,hi:999,name:'Continental',col:'#e0556d',dmg:'Historic snow-derecho; catastrophic wind + burial'}
+  ];
+  const DCOL={}; DSCALE.forEach(d=>DCOL[+d.t.slice(1)]=d.col);
+  function dScale(n){ return DSCALE[n]; }
+
+  // Main bow echo — the damaging swath. w=bow width (mi, the derecho's lateral extent),
+  // D=intensity, mph=peak gust, s=peak snow rate (in/hr), temp=°F, pres=surface mb.
+  // warn/mg/issue may each be a string OR an array of strings. Quad Cities -> Little Rock.
+  const MAIN=[
+    {t:'3:14 AM', p:'Quad Cities (Davenport, IA)', la:41.52,lo:-90.58,D:1,mph:63, w:40, s:2, temp:19,pres:972,
+      n:'GENESIS. Grand Rapids snow-showers and Marquette flurries collide with warm, moist Gulf air drawn up from Alabama and cold, dry air sliding east off the CO/WY high. The system bombs out — a 31.4 mb pressure fall — right on the stroke of 3:14.',
+      warn:['First BLIZZARD-WIND WARNING of the event — Scott & Rock Island Cos.','Snownado Warning — Scott Co., IA for a spin-up on the leading edge.'],
+      mg:'Meso-gamma MD #071A — pinpoint bow apex over the Quad Cities; ≥65 mph gusts and brief snownadoes imminent.',
+      issue:['Mesoscale Discussion #071 — explosive, bowing snow-convection; a historic snow-derecho may be underway.','Blizzard-Wind Watch #069 upgraded to PDS for the Iowa/Illinois corridor.']},
+    {t:'4:44 AM', p:'Des Moines, IA', la:41.59,lo:-93.62,D:2,mph:82, w:90, s:3, temp:17,pres:975,
+      n:'The line consolidates into a classic bow; the leading edge begins throwing off embedded snownadoes.',
+      warn:['PDS BLIZZARD-WIND WARNING — Des Moines metro; widespread ≥75 mph gusts.','Snownado Warning — Polk, Jasper & Poweshiek Cos. (embedded W2 near Grinnell).'],
+      mg:'Meso-gamma MD #072A — embedded W2 snownadoes along the Des Moines–Grinnell leading edge, next 30 min.',
+      issue:'Mesoscale Discussion #072 — bow accelerating SSW at ~55 mph; downstream watch expansion advised.'},
+    {t:'6:31 AM', p:'Kansas City, MO', la:39.10,lo:-94.58,D:3,mph:101,w:160,s:4, temp:21,pres:978,
+      n:'A mature, 160-mile-wide bow rakes the metro — the first major population center in the core.',
+      warn:['BLIZZARD-WIND EMERGENCY — Greater Kansas City.','Snownado Warning — Clay, Jackson & Johnson (KS) Cos.'],
+      mg:'Meso-gamma MD #073A — rotating bow apex over the KC metro; W2–W3 snownado threat, next 45 min.',
+      issue:['PDS Snownado Watch #072 — SE Kansas into NE Oklahoma and NW Arkansas, until 4 PM.','Mesoscale Discussion #073 — serial bow echoes consolidating; the wind field is maximizing.']},
+    {t:'8:15 AM', p:'Wichita, KS', la:37.69,lo:-97.34,D:3,mph:108,w:210, temp:24,pres:981,
+      warn:['BLIZZARD-WIND EMERGENCY — Sedgwick County; embedded snownadoes crossing the metro.','Snownado Warning — Sedgwick & Butler Cos.'],
+      mg:'Meso-gamma MD #074A — embedded W2 snownadoes, Wichita–Augusta, next 30 min.',
+      issue:'Mesoscale Discussion #074A — a secondary bow segment develops on the cold flank near Emporia.'},
+    {t:'9:53 AM', p:'Tulsa, OK', la:36.15,lo:-95.99,D:4,mph:124,w:270,s:6, temp:22,pres:979,
+      n:'Deepening further as it swings toward the Ozark Plateau; the bow is now 270 miles across.',
+      warn:['BLIZZARD-WIND EMERGENCY — Tulsa metro; multiple embedded snownadoes.','PDS SNOWNADO WARNING — Tulsa & Rogers Cos. (W3 confirmed).'],
+      mg:'Meso-gamma MD #075A — multiple embedded W3 snownadoes on the leading edge, Tulsa–Broken Arrow.',
+      issue:['Mesoscale Discussion #074 — the Fayetteville corridor is primed for the peak.','PDS Snownado Watch #075 — NW Arkansas & the Ozarks, until 6 PM.']},
+    {t:'11:00 AM',p:'Fayetteville, AR', la:36.06,lo:-94.16,D:5,mph:157,w:314,s:8, temp:18,pres:966,
+      n:'PEAK INTENSITY. Gusts to 157 mph — exactly half of 314 — under a bow measured at a record 314 miles wide. A D5 "Continental" snow-derecho; the leading edge is a wall of embedded W3–W4 snownadoes.',
+      warn:['EXTREME BLIZZARD-WIND EMERGENCY — the first ever issued for a snow-derecho; NW Arkansas below grade.','SNOWNADO EMERGENCY — Washington Co., AR for embedded W4 circulations.'],
+      mg:'Meso-gamma MD #076A — a WALL of embedded W3–W4 snownadoes along the D5 bow apex, Springdale–Fayetteville–West Fork; take cover now.',
+      issue:['Mesoscale Discussion #075 — the bow will begin to fracture near Little Rock into three pieces.','PDS Snownado Watch #076 — the Arkansas River Valley, until 7 PM.']},
+    {t:'12:37 PM',p:'Little Rock, AR', la:34.75,lo:-92.29,D:4,mph:118,w:240,s:5, temp:25,pres:972,
+      n:'Past peak but still violent as it crosses the Arkansas River; the bow now visibly splits three ways.',
+      warn:['BLIZZARD-WIND EMERGENCY — Pulaski County; the trifurcation begins.','Snownado Warning — Pulaski & Saline Cos.'],
+      mg:'Meso-gamma MD #077A — the leading edge is splitting; separate apexes now tracked over Pulaski Co.',
+      issue:['Mesoscale Discussion #076 — three distinct segments now tracked separately (see branches).','Snownado Watches #078 (survivor branch, KY) and #079 (wisp branch, TN) issued; Blizzard-Wind Watch #080 for the drizzle branch (S Arkansas/N Louisiana).']}
+  ];
+
+  // The three branches after Little Rock. col shades the fading track; each is its own story.
+  // Each point carries temp (°F) & pres (mb); warn/mg/issue may be a string or array.
+  const BRANCHES=[
+    {key:'drizzle', label:'BRANCH 1 — the drizzle branch (weakens & warms fast → central Louisiana)',
+     col:'#7ec98a', pts:[
+      {t:'1:41 PM', p:'Pine Bluff, AR', la:34.22,lo:-92.00,D:2,mph:78,temp:34,pres:985,n:'Warms quickly; snow flips to a cold rain.',
+        warn:'BLIZZARD-WIND WARNING — Jefferson Co.; last strong gusts of the branch.'},
+      {t:'3:26 PM', p:'Monroe, LA',     la:32.51,lo:-92.12,D:0,mph:44,temp:44,pres:994,n:'Barely a gust line now — chilly showers.',
+        issue:'Mesoscale Discussion #081 — branch 1 warming rapidly; all snow now rain.'},
+      {t:'5:09 PM', p:'Alexandria, LA', la:31.31,lo:-92.44,D:0,mph:0, temp:52,pres:1002,n:'Dissipates into a cool-ish drizzle over central Louisiana. Nothing left of the bow.',
+        issue:'Blizzard-Wind Watch #080 cancelled — branch 1 no longer a wind threat.'}
+     ]},
+    {key:'wisp', label:'BRANCH 2 — the wisp branch (weakens fast, warms slowly → the Bahamas)',
+     col:'#9aa6b8', pts:[
+      {t:'1:52 PM', p:'Memphis, TN', la:35.15,lo:-90.05,D:1,mph:58,temp:30,pres:990,n:'Ices over — flurries of sleet rime the Bluff City.',
+        warn:['SNOW SQUALL WARNING — Shelby Co.; sudden whiteout & flash-freeze on I-40/I-55.','Blizzard-Wind Warning — Shelby & Crittenden Cos. for a final 58 mph gust surge.'],
+        mg:'Meso-gamma MD #079A — a brief W1 snownado possible on the Memphis leading edge.'},
+      {t:'3:33 PM', p:'Jackson, TN', la:35.61,lo:-88.81,D:0,mph:40,temp:33,pres:996,
+        warn:'Snow Squall Warning — Madison Co.; brief whiteout.'},
+      {t:'5:10 PM', p:'Nashville, TN', la:36.16,lo:-86.78,D:0,mph:36,temp:35,pres:1000,n:'Barely-accumulating sleet dusts Music City; the snow is nearly spent.',
+        issue:['Special Weather Statement — light sleet & flurries, Nashville metro.','Snownado Watch #079 allowed to expire — no further rotation expected.']},
+      {t:'6:02 PM', p:'~60 mi E of Nashville (Cookeville, TN)', la:35.95,lo:-85.62,D:0,mph:0,temp:37,pres:1004,
+        n:'Precipitation ENDS here — but the clearing lags badly. A thin deck of stratus drifts on, refusing to break up.'},
+      {t:'Mar 16', p:'Freeport, Bahamas', la:26.53,lo:-78.70,D:0,mph:0,temp:74,pres:1018,
+        n:'The last wispy shred of cloud from the whole system finally reaches the Bahamas — and dissipates over Freeport. (Plotted off the map to the SE.)'}
+     ]},
+    {key:'survivor', label:'BRANCH 3 — the survivor branch (holds strength → Thunder Bay, ON)',
+     col:'#5f86ff', pts:[
+      {t:'2:38 PM', p:'Bowling Green, KY', la:36.99,lo:-86.44,D:3,mph:96,temp:26,pres:976,n:'Still a Crippler-strength bow — the only branch to keep its punch.',
+        warn:['BLIZZARD-WIND EMERGENCY — south-central Kentucky.','Snownado Warning — Warren & Barren Cos.'],
+        mg:'Meso-gamma MD #082A — the surviving bow apex, Warren Co.; brief W1 snownadoes possible.',
+        issue:'PDS Snownado / Blizzard-Wind Watch #078 — south-central Kentucky, until 9 PM.'},
+      {t:'4:19 PM', p:'Lexington, KY', la:38.04,lo:-84.50,D:2,mph:84,temp:24,pres:980,n:'Bluegrass buried under a fast, wind-driven band.',
+        warn:'BLIZZARD-WIND WARNING — Fayette Co.'},
+      {t:'5:26 PM', p:'Indianapolis, IN', la:39.77,lo:-86.16,D:2,mph:79,temp:20,pres:983,
+        warn:'PDS BLIZZARD-WIND WARNING — Indianapolis metro.',
+        issue:'Mesoscale Discussion #083 — the survivor bow crosses central Indiana; still capable of ≥75 mph gusts.'},
+      {t:'7:41 PM', p:'Grand Rapids, MI', la:42.96,lo:-85.67,D:1,mph:62,temp:18,pres:986,
+        n:'Comes FULL CIRCLE — the surviving core passes back over Grand Rapids, where the very first feeder flurries were born ~16½ hours earlier.',
+        warn:'Blizzard-Wind Warning — Kent Co.; the bow returns to its birthplace.'},
+      {t:'11:12 PM',p:'Thunder Bay, ON', la:48.38,lo:-89.25,D:0,mph:38,temp:8,pres:990,
+        n:'Crosses into Ontario and finally dissipates over Thunder Bay — the last of the strong bow, spent on the shore of Lake Superior.',
+        issue:'Joint SPC / Environment Canada statement — the 2027 Pi Day Snowrecho is declared dissipated.'}
+     ]}
+  ];
+
+  // The four pre-bomb ingredients, each with its own meteorological history along its path to
+  // the Quad Cities (they converge and phase there at 3:14 AM). Per waypoint: temp (°F),
+  // pres (mb), wind (sustained/gust mph), snow (storm-total in), rain (in). cum = totals at
+  // convergence. Times run the evening of Mar 13 into the small hours of Mar 14 (CST).
+  const INGREDIENTS=[
+    {key:'marquette', label:'weak flurries — NWS Marquette, MI', col:'#bcd3ff', dash:'2 4',
+     summary:'A few stray lake-effect flurries off Lake Superior — a trace at most (~0.2″ total); they hardly stick. No rain.',
+     cum:{snow:0.2,rain:0}, path:[
+      {t:'Mar 13 6:10 PM',p:'Marquette, MI',   la:46.54,lo:-87.40,temp:12,pres:1021,wind:9,snow:0.1,rain:0,n:'A few stray lake-effect flurries under a 12°F arctic airmass; they barely whiten the ground.'},
+      {t:'Mar 13 9:30 PM',p:'Green Bay, WI',   la:44.51,lo:-88.02,temp:14,pres:1020,wind:8,snow:0.1,rain:0},
+      {t:'Mar 14 12:40 AM',p:'Madison, WI',    la:43.07,lo:-89.40,temp:15,pres:1019,wind:8,snow:0,rain:0},
+      {t:'Mar 14 2:55 AM',p:'Dubuque, IA',     la:42.50,lo:-90.66,temp:16,pres:1017,wind:9,snow:0,rain:0,n:'Little more than flurries as it nears the Quad Cities.'}
+     ]},
+    {key:'grandrapids', label:'light snow showers — NWS Grand Rapids, MI', col:'#9ec5ff', dash:'2 4',
+     summary:'A few light lake-effect showers off Lake Michigan — barely a coating (~0.3″ total), but the moisture side of the setup.',
+     cum:{snow:0.3,rain:0}, path:[
+      {t:'Mar 13 7:20 PM',p:'Grand Rapids, MI',la:42.96,lo:-85.67,temp:22,pres:1018,wind:9,snow:0.1,rain:0,n:'A few light snow-showers off Lake Michigan; barely a coating.'},
+      {t:'Mar 13 10:50 PM',p:'Chicago, IL',    la:41.88,lo:-87.63,temp:24,pres:1016,wind:10,snow:0.1,rain:0,n:'Brushes the Chicago lakefront; flurries only.'},
+      {t:'Mar 14 1:30 AM',p:'Rockford, IL',    la:42.27,lo:-89.09,temp:21,pres:1015,wind:10,snow:0.1,rain:0},
+      {t:'Mar 14 3:00 AM',p:'Quad Cities, IA/IL',la:41.60,lo:-90.30,temp:20,pres:1014,wind:11,snow:0,rain:0,n:'A whisper of moisture on the NE flank at genesis.'}
+     ]},
+    {key:'alabama', label:'warm, moist inflow — up from Alabama', col:'#e8896f', dash:'6 4',
+     summary:'Mild, moist Gulf air nudged gently north — only a few sprinkles (~0.3″ total). Its role is heat and moisture, not rain.',
+     cum:{snow:0,rain:0.3}, path:[
+      {t:'Mar 13 5:00 PM',p:'Montgomery, AL',  la:32.36,lo:-86.30,temp:62,pres:1013,wind:10,snow:0,rain:0.1,n:'Mild, moist Gulf air; a stray sprinkle or two, nothing more.'},
+      {t:'Mar 13 9:00 PM',p:'Memphis, TN',     la:35.15,lo:-90.05,temp:54,pres:1011,wind:12,snow:0,rain:0.1,n:'Eases gently north up the Mississippi Valley.'},
+      {t:'Mar 14 1:00 AM',p:'St. Louis, MO',   la:38.63,lo:-90.20,temp:44,pres:1008,wind:13,snow:0,rain:0.1,n:'A little high cloud and a stray sprinkle; the air is still mild.'},
+      {t:'Mar 14 3:05 AM',p:'Quad Cities, IA/IL',la:41.30,lo:-90.70,temp:38,pres:1006,wind:14,snow:0,rain:0,n:'Overruns the cold air — the warmth and moisture that feed the bomb (almost no rain of its own).'}
+     ]},
+    {key:'cowy', label:'cold, dry air — east off CO/WY', col:'#6f9bff', dash:'6 4',
+     summary:'A cold, dry arctic HIGH that stays high pressure the whole way to Davenport (1034→1030 mb) — no precip, just the cold, dry anchor for cyclogenesis.',
+     cum:{snow:0,rain:0}, path:[
+      {t:'Mar 13 4:00 PM',p:'Cheyenne, WY',    la:41.14,lo:-104.82,temp:4,pres:1034,wind:12,snow:0,rain:0,n:'A cold, dry arctic high (1034 mb) settles over the High Plains — clear and calm.'},
+      {t:'Mar 13 9:00 PM',p:'North Platte, NE',la:41.14,lo:-100.77,temp:6,pres:1033,wind:11,snow:0,rain:0},
+      {t:'Mar 14 1:00 AM',p:'Omaha, NE',       la:41.26,lo:-95.94,temp:9,pres:1032,wind:12,snow:0,rain:0,n:'Bone-dry and cold under the dome; barely a breeze.'},
+      {t:'Mar 14 3:00 AM',p:'Davenport, IA',   la:41.52,lo:-90.58,temp:13,pres:1030,wind:13,snow:0,rain:0,n:'Still HIGH PRESSURE at Davenport (1030 mb) — the high’s leading edge noses up against the deepening low; the cold, dry anchor the bomb wraps around.'}
+     ]}
+  ];
+
+  // The 52 embedded snownadoes. Weaker than the Ozark monster (top out at W4); the bow's
+  // widespread lift spun up an unprecedented swarm. Counts: 9×W0, 15×W1, 13×W2, 9×W3, 6×W4.
+  // r=region for grouping in the readout. la/lo place each near the leading edge.
+  const EMBED=[
+    // ── Iowa (7) ──
+    {t:'3:14 AM',p:'Davenport, IA',       la:41.52,lo:-90.58,W:0,r:'Iowa'},
+    {t:'3:41 AM',p:'Iowa City, IA',       la:41.66,lo:-91.53,W:1,r:'Iowa'},
+    {t:'4:09 AM',p:'Grinnell, IA',        la:41.74,lo:-92.72,W:2,r:'Iowa',n:'The strongest embedded snownado north of the Missouri line — a solid W2 "Strong."'},
+    {t:'4:26 AM',p:'Newton, IA',          la:41.70,lo:-93.05,W:1,r:'Iowa'},
+    {t:'4:44 AM',p:'Des Moines, IA',      la:41.59,lo:-93.62,W:1,r:'Iowa'},
+    {t:'5:02 AM',p:'Indianola, IA',       la:41.36,lo:-93.56,W:0,r:'Iowa'},
+    {t:'5:19 AM',p:'Osceola, IA',         la:41.03,lo:-93.77,W:0,r:'Iowa'},
+    // ── Missouri / Kansas City (5) ──
+    {t:'5:41 AM',p:'Bethany, MO',         la:40.27,lo:-94.03,W:1,r:'Missouri (KC)'},
+    {t:'6:03 AM',p:'Cameron, MO',         la:39.74,lo:-94.24,W:1,r:'Missouri (KC)'},
+    {t:'6:31 AM',p:'Kansas City, MO',     la:39.10,lo:-94.58,W:2,r:'Missouri (KC)'},
+    {t:'6:48 AM',p:'Lee’s Summit, MO',la:38.91,lo:-94.38,W:1,r:'Missouri (KC)'},
+    {t:'7:05 AM',p:'Harrisonville, MO',   la:38.65,lo:-94.35,W:0,r:'Missouri (KC)'},
+    // ── Kansas (7) ──
+    {t:'7:22 AM',p:'Ottawa, KS',          la:38.62,lo:-95.27,W:1,r:'Kansas'},
+    {t:'7:44 AM',p:'Emporia, KS',         la:38.40,lo:-96.18,W:2,r:'Kansas'},
+    {t:'8:06 AM',p:'El Dorado, KS',       la:37.82,lo:-96.86,W:2,r:'Kansas'},
+    {t:'8:15 AM',p:'Wichita, KS',         la:37.69,lo:-97.34,W:2,r:'Kansas'},
+    {t:'8:28 AM',p:'Augusta, KS',         la:37.69,lo:-96.98,W:2,r:'Kansas'},
+    {t:'8:47 AM',p:'Winfield, KS',        la:37.24,lo:-96.99,W:1,r:'Kansas'},
+    {t:'8:59 AM',p:'Arkansas City, KS',   la:37.06,lo:-97.04,W:1,r:'Kansas'},
+    // ── Oklahoma (7) ──
+    {t:'9:14 AM',p:'Ponca City, OK',      la:36.71,lo:-97.09,W:2,r:'Oklahoma'},
+    {t:'9:31 AM',p:'Pawhuska, OK',        la:36.67,lo:-96.34,W:2,r:'Oklahoma'},
+    {t:'9:39 AM',p:'Bartlesville, OK',    la:36.75,lo:-95.98,W:2,r:'Oklahoma'},
+    {t:'9:53 AM',p:'Tulsa, OK',           la:36.15,lo:-95.99,W:3,r:'Oklahoma'},
+    {t:'10:02 AM',p:'Broken Arrow, OK',   la:36.06,lo:-95.79,W:3,r:'Oklahoma'},
+    {t:'10:19 AM',p:'Muskogee, OK',       la:35.75,lo:-95.37,W:2,r:'Oklahoma'},
+    {t:'10:27 AM',p:'Tahlequah, OK',      la:35.92,lo:-94.97,W:3,r:'Oklahoma'},
+    // ── Arkansas — the peak corridor (14) ──
+    {t:'10:41 AM',p:'Siloam Springs, AR', la:36.19,lo:-94.54,W:3,r:'Arkansas (peak corridor)'},
+    {t:'10:52 AM',p:'Springdale, AR',     la:36.19,lo:-94.13,W:4,r:'Arkansas (peak corridor)',n:'W4 "Devastating" — the strongest embedded snownado of the event, riding the D5 core.'},
+    {t:'11:00 AM',p:'Fayetteville, AR',   la:36.06,lo:-94.16,W:4,r:'Arkansas (peak corridor)',n:'Straddles the peak of the bow at the moment of maximum intensity.'},
+    {t:'11:06 AM',p:'Farmington, AR',     la:36.04,lo:-94.25,W:4,r:'Arkansas (peak corridor)'},
+    {t:'11:11 AM',p:'Prairie Grove, AR',  la:35.98,lo:-94.32,W:4,r:'Arkansas (peak corridor)'},
+    {t:'11:17 AM',p:'West Fork, AR',      la:35.92,lo:-94.18,W:4,r:'Arkansas (peak corridor)'},
+    {t:'11:29 AM',p:'Alma, AR',           la:35.48,lo:-94.22,W:4,r:'Arkansas (peak corridor)',n:'Sixth and last W4 — scours the Boston Mountains front.'},
+    {t:'11:33 AM',p:'Fort Smith, AR',     la:35.39,lo:-94.40,W:1,r:'Arkansas (peak corridor)'},
+    {t:'11:38 AM',p:'Ozark, AR',          la:35.49,lo:-93.83,W:3,r:'Arkansas (peak corridor)'},
+    {t:'11:47 AM',p:'Clarksville, AR',    la:35.47,lo:-93.47,W:3,r:'Arkansas (peak corridor)'},
+    {t:'11:58 AM',p:'Russellville, AR',   la:35.28,lo:-93.13,W:3,r:'Arkansas (peak corridor)'},
+    {t:'12:12 PM',p:'Morrilton, AR',      la:35.15,lo:-92.74,W:3,r:'Arkansas (peak corridor)'},
+    {t:'12:24 PM',p:'Conway, AR',         la:35.09,lo:-92.44,W:2,r:'Arkansas (peak corridor)'},
+    {t:'12:37 PM',p:'Little Rock, AR',    la:34.75,lo:-92.29,W:3,r:'Arkansas (peak corridor)'},
+    // ── Survivor branch — Arkansas to Michigan (12) ──
+    {t:'1:15 PM',p:'Batesville, AR',      la:35.77,lo:-91.64,W:2,r:'Survivor branch'},
+    {t:'1:38 PM',p:'Jonesboro, AR',       la:35.84,lo:-90.70,W:2,r:'Survivor branch'},
+    {t:'2:03 PM',p:'Poplar Bluff, MO',    la:36.76,lo:-90.39,W:1,r:'Survivor branch'},
+    {t:'2:41 PM',p:'Paducah, KY',         la:37.08,lo:-88.60,W:1,r:'Survivor branch'},
+    {t:'3:14 PM',p:'Bowling Green, KY',   la:36.99,lo:-86.44,W:1,r:'Survivor branch',n:'Spins up at exactly 3:14 in the afternoon — a second stroke of pi.'},
+    {t:'3:44 PM',p:'Elizabethtown, KY',   la:37.69,lo:-85.86,W:0,r:'Survivor branch'},
+    {t:'4:19 PM',p:'Lexington, KY',       la:38.04,lo:-84.50,W:1,r:'Survivor branch'},
+    {t:'4:52 PM',p:'Lawrenceburg, IN',    la:39.09,lo:-84.85,W:0,r:'Survivor branch'},
+    {t:'5:26 PM',p:'Indianapolis, IN',    la:39.77,lo:-86.16,W:1,r:'Survivor branch'},
+    {t:'5:58 PM',p:'Kokomo, IN',          la:40.49,lo:-86.13,W:0,r:'Survivor branch'},
+    {t:'7:03 PM',p:'Lansing, MI',         la:42.73,lo:-84.56,W:0,r:'Survivor branch'},
+    {t:'7:41 PM',p:'Grand Rapids, MI',    la:42.96,lo:-85.67,W:0,r:'Survivor branch',n:'The final embedded snownado dissipates back over Grand Rapids — the system’s full circle.'}
+  ];
+  const WCOUNT={0:0,1:0,2:0,3:0,4:0}; EMBED.forEach(e=>WCOUNT[e.W]++);
+
+  const RECORDS=[
+    ['Type','Snow-derecho ("snowrecho") — a wide, forward-propagating bow echo'],
+    ['Date','March 14, 2027 (Pi Day) — genesis at 3:14 AM CST'],
+    ['Genesis','Bombogenesis over the Quad Cities — a 31.4 mb pressure fall'],
+    ['Peak intensity','D5 "Continental" — gusts to 157 mph (half of 314)'],
+    ['Record bow width','314 miles (widest snow-derecho bow on record)'],
+    ['Peak warning','EXTREME BLIZZARD-WIND EMERGENCY (first for a snow-derecho)'],
+    ['Embedded snownadoes',EMBED.length+' — '+[0,1,2,3,4].map(k=>WCOUNT[k]+'×W'+k).join(', ')+' (none stronger)'],
+    ['The trifurcation','Split at Little Rock into three branches — "three slices of one pie"'],
+    ['Reach','10 U.S. states + Ontario; the last cloud shred died over the Bahamas'],
+    ['System lifetime','≈ 3 days, 14 hours (to the final Bahamas wisp on Mar 16)']
+  ];
+
+  // Forecast evolution before the storm (Mar 12-14, times CST). Pre-peak outlook per user spec:
+  // 60% CIG3 snownado, 90% CIG3 wind, 60% CIG2 squall.
+  const PRELUDE=[
+    {d:'March 12',t:'2:19 PM', prod:'Day 3 Snow Outlook',        n:'MARGINAL risk from Iowa into Arkansas as a phasing arctic front and a fat Gulf fetch are flagged for Pi Day. Confidence low; the setup is, in one forecaster’s words, "irrational."'},
+    {d:'March 13',t:'1:57 AM', prod:'Day 2 Outlook',             n:'Upgraded to ENHANCED; first mention of a bowing, high-wind snow-convection scenario and isolated embedded snownadoes.'},
+    {d:'March 13',t:'2:05 PM', prod:'HWO / Spotter Activation',  n:'Spotter Level 2 (Activated · Routine Reports) as the wind threat sharpens across the Corn Belt and southern Plains.'},
+    {d:'March 14',t:'12:00 AM',prod:'Day 1 Outlook',             n:'MODERATE risk; a broad 45% blizzard-wind area from Iowa to Arkansas, with a 30% hatched snownado swarm along the projected bow.'},
+    {d:'March 14',t:'1:20 AM', prod:'Mesoscale Discussion #070', n:'Four air streams converging on the Quad Cities; explosive, bowing development and rapid pressure falls imminent. Watch issuance advised.'},
+    {d:'March 14',t:'2:40 AM', prod:'PDS Snownado / Blizzard-Wind Watch #069', n:'Particularly Dangerous Situation watch — Quad Cities south-southwest through the Ozarks, until 6 PM.'},
+    {d:'March 14',t:'3:00 AM', prod:'HWO / Spotter Activation',  n:'Boosted to Spotter Level 4 (Full Activation · Priority Reports) minutes before genesis; the bow is about to form.'},
+    {d:'March 14',t:'10:20 AM',prod:'Day 1 Outlook (upgrade) — PRE-PEAK', n:'Ahead of the Fayetteville peak: 60% CIG3 snownado, 90% CIG3 blizzard wind, and 60% CIG2 snow squall over NW Arkansas — a near-maxed wind field with a dense embedded-snownado threat. The most extreme snow-derecho outlook ever drawn.'},
+    {d:'March 14',t:'10:35 AM',prod:'HWO / Spotter Activation',  n:'Spotter Level 5 (Emergency · Continuous Reporting) — maximum activation across NW Arkansas for the peak.'}
+  ];
+
+  // Aftermath — storm-total snow / peak gust by city [city, inches, gust mph]. Pi puns in notes.
+  const AFTER_CITY=[
+    ['Grinnell, IA',13,88],['Des Moines, IA',14,82],['Kansas City, MO',19,101],['Wichita, KS',16,108],
+    ['Tulsa, OK',23,124],['Fayetteville, AR',31,157],['Fort Smith, AR',27,138],
+    ['Little Rock, AR',18,118],['Bowling Green, KY',12,96],['Indianapolis, IN',9,79],['Grand Rapids, MI',6,62]
+  ];
+  const AFTER_NOTES=[
+    'SPC Whiteout Damage Assessment Teams surveyed a continuous D5 wind swath through NW Arkansas — the first "Continental" rating ever assigned to a snow-derecho.',
+    'Fayetteville logged the peak: a 157 mph gust (precisely half of 314) beneath a bow measured at a record 314 miles wide. The numbers were, forecasters joked, transcendental.',
+    'All '+EMBED.length+' embedded snownadoes were confirmed on survey — a swarm without precedent — yet not one topped W4; the wide bow shared its lift '+EMBED.length+' ways instead of feeding one monster.',
+    'Three slices of one pie: the Louisiana drizzle branch, the Bahamas-bound wisp, and the survivor that went full circle to Michigan before dying over Thunder Bay.',
+    'More than 2 million customers lost power across ten states; the wind, not the snow, did most of the damage — a well-rounded disaster.',
+    'The Storm Prediction Center’s verdict: the widest, windiest, and most prolific snow-derecho in the modern record. Forecasters who called the setup impossible were left eating humble pie.'
+  ];
+
+  // THE GREAT CONTRAST — hour-by-hour, Fayetteville, AR (under the D5 core) vs Alexandria, LA
+  // (the dying tail of Branch 1). fay: temp°F, pres mb, g=peak gust mph, snow/rain = that hour (in).
+  // alx: temp°F, pres mb, w=wind mph, snow/rain = that hour. All March 14, times CST.
+  // Alexandria stays mild all day and gets only a slight late-afternoon drizzle (~0.06" total, no snow).
+  const CONTRAST=[
+    {t:'3:00 AM', fay:{temp:25,pres:1006,g:12, snow:0.0,rain:0}, alx:{temp:61,pres:1012,w:5, snow:0,rain:0}},
+    {t:'4:00 AM', fay:{temp:24,pres:1004,g:15, snow:0.0,rain:0}, alx:{temp:60,pres:1012,w:6, snow:0,rain:0}},
+    {t:'5:00 AM', fay:{temp:24,pres:1002,g:20, snow:0.0,rain:0}, alx:{temp:59,pres:1012,w:6, snow:0,rain:0}},
+    {t:'6:00 AM', fay:{temp:23,pres:1000,g:28, snow:0.1,rain:0}, alx:{temp:58,pres:1011,w:5, snow:0,rain:0}, fayTag:'◄ first flurries reach town'},
+    {t:'7:00 AM', fay:{temp:23,pres:997, g:40, snow:0.2,rain:0}, alx:{temp:60,pres:1011,w:6, snow:0,rain:0}},
+    {t:'8:00 AM', fay:{temp:22,pres:992, g:62, snow:0.5,rain:0}, alx:{temp:63,pres:1010,w:7, snow:0,rain:0}},
+    {t:'9:00 AM', fay:{temp:21,pres:985, g:95, snow:2.0,rain:0}, alx:{temp:65,pres:1010,w:8, snow:0,rain:0}},
+    {t:'10:00 AM',fay:{temp:20,pres:975, g:128,snow:5.0,rain:0}, alx:{temp:66,pres:1009,w:8, snow:0,rain:0}},
+    {t:'11:00 AM',fay:{temp:18,pres:966, g:157,snow:8.0,rain:0}, alx:{temp:66,pres:1008,w:9, snow:0,rain:0}, fayTag:'◄ PEAK — 157 mph gust, 8"/hr snow, the 966 mb mesolow overhead', alxTag:'◄ mild and rain-free while Fayetteville is buried'},
+    {t:'12:00 PM',fay:{temp:19,pres:972, g:120,snow:6.0,rain:0}, alx:{temp:65,pres:1008,w:9, snow:0,rain:0}},
+    {t:'1:00 PM', fay:{temp:20,pres:979, g:88, snow:4.0,rain:0}, alx:{temp:63,pres:1007,w:10,snow:0,rain:0}},
+    {t:'2:00 PM', fay:{temp:21,pres:984, g:60, snow:2.5,rain:0}, alx:{temp:60,pres:1006,w:10,snow:0,rain:0.00}},
+    {t:'3:00 PM', fay:{temp:21,pres:988, g:42, snow:1.5,rain:0}, alx:{temp:57,pres:1005,w:11,snow:0,rain:0.00}, alxTag:'◄ high cloud thickens as the dying Branch 1 nears'},
+    {t:'4:00 PM', fay:{temp:22,pres:991, g:30, snow:0.8,rain:0}, alx:{temp:54,pres:1004,w:12,snow:0,rain:0.02}, alxTag:'◄ a brief, slight drizzle — the only rain Alexandria sees'},
+    {t:'5:00 PM', fay:{temp:22,pres:994, g:22, snow:0.3,rain:0}, alx:{temp:53,pres:1004,w:10,snow:0,rain:0.01}, alxTag:'◄ Branch 1 dissipates; the drizzle already ending'},
+    {t:'6:00 PM', fay:{temp:22,pres:996, g:16, snow:0.1,rain:0}, alx:{temp:53,pres:1006,w:7, snow:0,rain:0.00}},
+    {t:'7:00 PM', fay:{temp:21,pres:998, g:12, snow:0.0,rain:0}, alx:{temp:54,pres:1008,w:5, snow:0,rain:0}}
+  ];
+  const CONTRAST_TOTALS={
+    fay:'31.0" snow · 0.00" rain · peak gust 157 mph · low 966 mb · min temp 18°F',
+    alx:'0.0" snow · 0.03" rain · peak wind 12 mph · low 1004 mb · min temp 53°F'
+  };
+
+  function disc(cx,cy,r){ const p=[]; for(let i=0;i<24;i++){ const a=2*Math.PI*i/24; p.push([Math.round((cx+r*Math.cos(a))*10)/10,Math.round((cy+r*Math.sin(a))*10)/10]); } return p; }
+
+  // Emit a waypoint's products into the readout. warn/mg/issue may each be a string or array.
+  // ⚠ = warning/emergency · ◈ = meso-gamma discussion · ▸ = mesoscale discussion / watch.
+  function emitProds(L,w,pad){ const P=pad||'             ';
+    const put=(v,pre)=>{ if(!v) return; (Array.isArray(v)?v:[v]).forEach(x=>L.push(P+pre+x)); };
+    put(w.warn,'⚠ '); put(w.mg,'◈ '); put(w.issue,'▸ '); }
+  // "temp°F · pres mb" tag for a waypoint (either field may be absent).
+  function tp(w){ const a=[]; if(w.temp!=null)a.push(w.temp+'°F'); if(w.pres!=null)a.push(w.pres+' mb'); return a.join(' · '); }
+
+  function render(){
+    const mainPts=MAIN.map(w=>proj(w.la,w.lo));
+    // Fit box from the main swath + all branch points EXCEPT the far Bahamas wisp, + feeder sources.
+    const fit=[...mainPts];
+    BRANCHES.forEach(b=>b.pts.forEach(p=>{ if(!(b.key==='wisp'&&p.p.indexOf('Bahamas')>=0)) fit.push(proj(p.la,p.lo)); }));
+    INGREDIENTS.forEach(g=>g.path.forEach(p=>fit.push(proj(p.la,p.lo))));
+    let minx=Math.min(...fit.map(p=>p[0])), maxx=Math.max(...fit.map(p=>p[0]));
+    let miny=Math.min(...fit.map(p=>p[1])), maxy=Math.max(...fit.map(p=>p[1]));
+    const padX=(maxx-minx)*0.06+18, padY=(maxy-miny)*0.10+18;
+    minx-=padX; maxx+=padX; miny-=padY; maxy+=padY;
+    let w=maxx-minx, h=maxy-miny; const AR=960/600;
+    if(w/h<AR){ const nw=h*AR; minx-=(nw-w)/2; w=nw; } else { const nh=w/AR; miny-=(nh-h)/2; h=nh; }
+    SPC.map.setView(minx,miny,w,h);
+
+    const polys=[];
+    // Pre-bomb ingredient streams — dashed paths with small markers, converging on the Quad Cities.
+    INGREDIENTS.forEach(g=>{ const pp=g.path.map(p=>proj(p.la,p.lo));
+      polys.push({points:pp.concat(pp.slice().reverse()),fill:'none',opacity:0,stroke:g.col,strokeWidth:1.1,dash:g.dash});
+      pp.forEach(c=>polys.push({points:disc(c[0],c[1],2.4),fill:g.col,opacity:0.7,stroke:'#0b1320',strokeWidth:0.4})); });
+
+    // Main bow echo — a WIDE true-scale swath band (the derecho's damage footprint).
+    const half=MAIN.map(m=>Math.max(4,m.w*PXMI*0.5));
+    const left=[],right=[];
+    for(let i=0;i<mainPts.length;i++){
+      const a=mainPts[Math.max(0,i-1)], b=mainPts[Math.min(mainPts.length-1,i+1)];
+      const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+      left.push([Math.round((mainPts[i][0]+nx*half[i])*10)/10, Math.round((mainPts[i][1]+ny*half[i])*10)/10]);
+      right.push([Math.round((mainPts[i][0]-nx*half[i])*10)/10, Math.round((mainPts[i][1]-ny*half[i])*10)/10]);
+    }
+    polys.push({points:left.concat(right.reverse()),fill:'#7dd3fc',opacity:0.16,stroke:'#38bdf8',strokeWidth:1,dash:'5 3'});
+    // Intensity discs at each main waypoint, colored by the D scale.
+    MAIN.forEach((m,i)=>polys.push({points:disc(mainPts[i][0],mainPts[i][1],Math.max(5,half[i]*0.55)),fill:DCOL[m.D],opacity:0.72,stroke:'#0b1320',strokeWidth:0.7}));
+    // Centerline
+    polys.push({points:mainPts.concat(mainPts.slice().reverse()),fill:'none',opacity:0,stroke:'#ffffff',strokeWidth:1.4});
+
+    // Three branches — thinner fading tracks with small discs.
+    const lastMain=mainPts[mainPts.length-1];
+    BRANCHES.forEach(b=>{
+      const bp=b.pts.filter(p=>!(b.key==='wisp'&&p.p.indexOf('Bahamas')>=0)).map(p=>proj(p.la,p.lo));
+      const chain=[lastMain,...bp];
+      polys.push({points:chain.concat(chain.slice().reverse()),fill:'none',opacity:0,stroke:b.col,strokeWidth:1.6,dash:'6 4'});
+      b.pts.forEach(p=>{ if(b.key==='wisp'&&p.p.indexOf('Bahamas')>=0) return; const c=proj(p.la,p.lo);
+        polys.push({points:disc(c[0],c[1],3.2),fill:b.col,opacity:0.75,stroke:'#0b1320',strokeWidth:0.5}); });
+    });
+
+    // Embedded snownadoes — small discs colored by the Whiteout scale.
+    EMBED.forEach(e=>{ const c=proj(e.la,e.lo); const r=2.2+e.W*0.55;
+      polys.push({points:disc(c[0],c[1],r),fill:WCOL[e.W],opacity:0.85,stroke:'#0b1320',strokeWidth:0.5}); });
+
+    SPC.map.renderPolys(polys);
+  }
+
+  function dchip(d){ return '<span style="display:inline-flex;align-items:center;gap:5px;margin:2px 6px 2px 0;font-size:11px">'+
+    '<span style="width:11px;height:11px;border-radius:2px;background:'+d.col+';display:inline-block"></span>'+d.t+' '+d.name+' ('+d.lo+(d.hi>998?'+':'–'+d.hi)+' mph)</span>'; }
+  function wchip(w){ return '<span style="display:inline-flex;align-items:center;gap:5px;margin:2px 6px 2px 0;font-size:11px">'+
+    '<span style="width:11px;height:11px;border-radius:2px;background:'+WCOL[+w.t.slice(1)]+';display:inline-block"></span>'+w.t+' '+w.name+'</span>'; }
+
+  function tools(el){
+    el.innerHTML='<h2 class="sec">Archived Case Study</h2>'+
+      '<p style="color:#8aa0bd;font-size:12px;margin:4px 0">A historical meteorological record. The bow-echo swath and its three branches are plotted on a regional map at left (the four pre-bomb ingredient streams are dashed; swath at true width); the full chronology — ingredient histories, temperatures &amp; pressures, watches/mesoscales/warnings, all '+EMBED.length+' embedded snownadoes, and an hour-by-hour Fayetteville-vs-Alexandria contrast — is in the panel at right.</p>'+
+      '<h2 class="sec">Record summary</h2>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        RECORDS.map(r=>'<tr><td style="color:#8aa0bd;padding:3px 8px 3px 0;vertical-align:top;white-space:nowrap">'+r[0]+'</td><td style="color:#1a2433;padding:3px 0">'+r[1]+'</td></tr>').join('')+
+      '</table>'+
+      '<h2 class="sec">Snow-Derecho (D) scale</h2>'+
+      '<div>'+DSCALE.map(dchip).join('')+'</div>'+
+      '<h2 class="sec">Embedded snownadoes — Whiteout (W) scale</h2>'+
+      '<div>'+T.WHITEOUT.filter(w=>+w.t.slice(1)<=4).map(wchip).join('')+'</div>';
+  }
+
+  function lines(){
+    const L=[];
+    L.push('NATIONAL SNOW PREDICTION CENTER — STORM DATA / METEOROLOGICAL HISTORY');
+    L.push('THE 2027 PI DAY SNOWRECHO  (snow-derecho)');
+    L.push('March 14, 2027 (Pi Day)   ·   all times CST');
+    L.push('');
+    L.push('...RECORD SUMMARY...');
+    RECORDS.forEach(r=>L.push('  '+(r[0]+':').padEnd(24)+r[1]));
+    L.push('  Not a rotating monster like the 2026 Ozark Super Snownado, but a wide,');
+    L.push('  wind-driven bow — the widest, windiest snow-derecho in the modern record.');
+    L.push('');
+    L.push('...THE FOUR PRE-BOMB INGREDIENTS — METEOROLOGICAL HISTORY...');
+    L.push('');
+    L.push('  In the small hours of Pi Day, four air streams came full circle over the');
+    L.push('  Quad Cities and the setup, once called irrational, finally added up. Each');
+    L.push('  arrived with its own history (temp · pressure · wind · snow · rain):');
+    INGREDIENTS.forEach(g=>{
+      L.push('');
+      L.push('  ■ '+g.label.toUpperCase());
+      L.push('    '+g.summary);
+      g.path.forEach(p=>{
+        L.push('    '+p.t.padEnd(17)+p.p.padEnd(20)+p.temp+'°F · '+p.pres+' mb · wind '+p.wind+' mph · snow '+p.snow+'" · rain '+p.rain+'"');
+        if(p.n) L.push('                   '+p.n);
+      });
+      L.push('    ── path totals at the Quad Cities: '+g.cum.snow+'" snow · '+g.cum.rain+'" rain ──');
+    });
+    L.push('');
+    L.push('  These four gentle streams phased at 3:14 AM and — where the mild Gulf');
+    L.push('  moisture overran the cold, dry arctic air — the surface low bombed out,');
+    L.push('  a 31.4 mb fall to a mesolow near 968 mb, launching a bow echo that would');
+    L.push('  race south-southwest into the Ozarks.');
+    L.push('');
+    L.push('...CONDITIONS LEADING UP TO THE STORM (FORECAST EVOLUTION)...');
+    let pd=null;
+    PRELUDE.forEach(e=>{ if(e.d!==pd){ pd=e.d; L.push(''); L.push('  ── '+e.d+' ──'); }
+      L.push('  '+e.t.padEnd(9)+e.prod);
+      L.push('             '+e.n); });
+    L.push('');
+    L.push('...METEOROLOGICAL HISTORY — THE MAIN BOW (Quad Cities → Little Rock)...');
+    L.push('  Products key:  ⚠ warning / emergency   ◈ meso-gamma discussion   ▸ mesoscale discussion / watch');
+    L.push('');
+    MAIN.forEach(m=>{ const ds=dScale(m.D);
+      let line='  '+m.t.padEnd(9)+m.p.padEnd(30)+'D'+m.D+' '+ds.name.padEnd(12)+'· gust '+m.mph+' mph · bow '+m.w+' mi';
+      if(m.s) line+=' · '+m.s+' in/hr';
+      line+=' · '+tp(m);
+      L.push(line);
+      if(m.n) L.push('             '+m.n);
+      emitProds(L,m);
+    });
+    L.push('');
+    L.push('...THE TRIFURCATION — THREE SLICES OF ONE PIE (from Little Rock)...');
+    BRANCHES.forEach(b=>{ L.push(''); L.push('  '+b.label);
+      b.pts.forEach(p=>{ const ds=dScale(p.D);
+        let line='    '+p.t.padEnd(12)+p.p.padEnd(34);
+        line+= p.mph? ('D'+p.D+' '+ds.name+' · gust '+p.mph+' mph') : '(spent)';
+        line+=' · '+tp(p);
+        L.push(line.replace(/\s+$/,''));
+        if(p.n) L.push('               '+p.n);
+        emitProds(L,p,'               ');
+      });
+    });
+    L.push('');
+    L.push('...EMBEDDED SNOWNADOES — THE SWARM ('+EMBED.length+' total)...');
+    L.push('');
+    L.push('  Count by intensity:  W0 ×'+WCOUNT[0]+'   W1 ×'+WCOUNT[1]+'   W2 ×'+WCOUNT[2]+
+           '   W3 ×'+WCOUNT[3]+'   W4 ×'+WCOUNT[4]+'   (none stronger than W4)');
+    L.push('  The wide bow spread its lift across '+EMBED.length+' vortices instead of feeding one giant.');
+    L.push('  A prolific swarm — but every one stayed at or below W4 "Devastating."');
+    let rg=null;
+    EMBED.forEach(e=>{ if(e.r!==rg){ rg=e.r; L.push(''); L.push('  ── '+e.r+' ──'); }
+      const ws=T.wScale('W'+e.W);
+      let line='  '+e.t.padEnd(9)+e.p.padEnd(24)+'W'+e.W+' '+ws.name;
+      L.push(line.replace(/\s+$/,''));
+      if(e.n) L.push('             '+e.n);
+    });
+    L.push('');
+    L.push('...AFTERMATH...');
+    L.push('');
+    L.push('  Storm-total snowfall & peak gust (selected cities):');
+    AFTER_CITY.forEach(c=>L.push('    '+c[0].padEnd(20)+String(c[1]+' in').padEnd(8)+'· gust '+c[2]+' mph'));
+    L.push('');
+    L.push('  Damage survey & impacts:');
+    AFTER_NOTES.forEach(n=>L.push('    • '+n));
+    L.push('');
+    L.push('...THE GREAT CONTRAST — FAYETTEVILLE, AR vs ALEXANDRIA, LA...');
+    L.push('');
+    L.push('  One storm, two worlds. Fayetteville sat under the D5 bow apex — a historic');
+    L.push('  31" snow-derecho with a 157 mph gust and the 966 mb mesolow overhead.');
+    L.push('  Alexandria, ~340 miles south at the dying tail of Branch 1, stayed mild all');
+    L.push('  day and got only a brief, cool-ish late-afternoon drizzle — about three');
+    L.push('  hundredths of an inch, and never a flake of snow. Hour by hour, the same system:');
+    L.push('');
+    L.push('  legend:  temp °F · surface pressure mb · gust/wind mph · snow (this hr) · rain (this hr)');
+    const row=(lab,d,kind)=>'    '+lab.padEnd(13)+d.temp+'°F · '+d.pres+' mb · '+kind+' '+String(kind==='gust'?d.g:d.w).padStart(3)+
+      ' · snow '+d.snow.toFixed(1)+'" · rain '+d.rain.toFixed(2)+'"';
+    CONTRAST.forEach(h=>{
+      L.push('');
+      L.push('  '+h.t);
+      L.push(row('Fayetteville',h.fay,'gust'));
+      if(h.fayTag) L.push('        '+h.fayTag);
+      L.push(row('Alexandria',h.alx,'wind'));
+      if(h.alxTag) L.push('        '+h.alxTag);
+    });
+    L.push('');
+    L.push('  ── STORM TOTALS ──');
+    L.push('    Fayetteville   '+CONTRAST_TOTALS.fay);
+    L.push('    Alexandria     '+CONTRAST_TOTALS.alx);
+    L.push('');
+    L.push('  The same storm buried one city under 31 inches with a 157 mph gust and left');
+    L.push('  a 0.03" drizzle on another ~340 miles south — the great contrast of Pi Day.');
+    L.push('');
+    L.push('  ─── 3.14159… and, like pi’s digits, this one just kept going. ───');
+    L.push('');
+    L.push('...END...');
+    return L;
+  }
+
+  function preview(el){
+    const L=lines();
+    el.innerHTML='<div class="preview-text" id="srText"></div>'+
+      '<div style="margin-top:8px"><button id="srPng">⬇ PNG</button> <button id="srCopy">⧉ Copy history</button></div>';
+    el.querySelector('#srText').textContent=L.join('\n');
+    el.querySelector('#srPng').onclick=()=>SPC.state.exportPNG(d=>{const a=document.createElement('a');a.href=d;a.download='pi-day-snowrecho.png';a.click();});
+    el.querySelector('#srCopy').onclick=()=>SPC.state.copyText(L.join('\n'));
+  }
+
+  SPC.tabs.register('snowrecho',{tools,preview,render});
 })();
 </script>
 <script>
